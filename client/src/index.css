@@ -1,3 +1,83 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap");
+
 @import "tailwindcss";
 
- 
+/* ===========================
+   Theme
+=========================== */
+
+:root {
+  --color-bg: #111111;
+  --color-surface: #181818;
+  --color-surface-2: #222222;
+
+  --color-text: #ffffff;
+  --color-text-muted: #a8a8a8;
+
+  --color-border: rgba(255,255,255,.08);
+
+  --color-primary: #3b82f6;
+}
+
+.light {
+  --color-bg: #f4f4f4;
+  --color-surface: #ffffff;
+  --color-surface-2: #ececec;
+
+  --color-text: #111111;
+  --color-text-muted: #666666;
+
+  --color-border: rgba(0,0,0,.08);
+}
+
+/* ===========================
+   Tailwind Theme
+=========================== */
+
+@theme inline {
+  --font-sans: "Inter", sans-serif;
+  --font-serif: "Instrument Serif", serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-2: var(--color-surface-2);
+
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+
+  --color-border: var(--color-border);
+
+  --color-primary: var(--color-primary);
+}
+
+/* ===========================
+   Base
+=========================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  transition:
+    background-color .25s ease,
+    color .25s ease;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
