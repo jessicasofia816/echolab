@@ -9,27 +9,31 @@
 =========================== */
 
 :root {
-  --color-bg: #111111;
-  --color-surface: #181818;
-  --color-surface-2: #222222;
+  --theme-bg: #111111;
+  --theme-surface: #181818;
+  --theme-surface-2: #222222;
 
-  --color-text: #ffffff;
-  --color-text-muted: #a8a8a8;
+  --theme-text: #ffffff;
+  --theme-text-muted: #a8a8a8;
 
-  --color-border: rgba(255,255,255,.08);
+  --theme-border: rgba(255, 255, 255, 0.08);
+  --theme-border-strong: rgba(255, 255, 255, 0.14);
 
-  --color-primary: #3b82f6;
+  --theme-primary: #3b82f6;
 }
 
 .light {
-  --color-bg: #f4f4f4;
-  --color-surface: #ffffff;
-  --color-surface-2: #ececec;
+  --theme-bg: #f4f4f4;
+  --theme-surface: #ffffff;
+  --theme-surface-2: #ececec;
 
-  --color-text: #111111;
-  --color-text-muted: #666666;
+  --theme-text: #111111;
+  --theme-text-muted: #666666;
 
-  --color-border: rgba(0,0,0,.08);
+  --theme-border: rgba(0, 0, 0, 0.08);
+  --theme-border-strong: rgba(0, 0, 0, 0.14);
+
+  --theme-primary: #3b82f6;
 }
 
 /* ===========================
@@ -41,16 +45,17 @@
   --font-serif: "Instrument Serif", serif;
   --font-mono: "JetBrains Mono", monospace;
 
-  --color-bg: var(--color-bg);
-  --color-surface: var(--color-surface);
-  --color-surface-2: var(--color-surface-2);
+  --color-bg: var(--theme-bg);
+  --color-surface: var(--theme-surface);
+  --color-surface-2: var(--theme-surface-2);
 
-  --color-text: var(--color-text);
-  --color-text-muted: var(--color-text-muted);
+  --color-text: var(--theme-text);
+  --color-text-muted: var(--theme-text-muted);
 
-  --color-border: var(--color-border);
+  --color-border: var(--theme-border);
+  --color-border-strong: var(--theme-border-strong);
 
-  --color-primary: var(--color-primary);
+  --color-primary: var(--theme-primary);
 }
 
 /* ===========================
@@ -69,15 +74,15 @@ html {
 
 body {
   margin: 0;
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--theme-bg);
+  color: var(--theme-text);
   font-family: var(--font-sans);
   transition:
-    background-color .25s ease,
-    color .25s ease;
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--theme-primary);
   outline-offset: 2px;
 }
