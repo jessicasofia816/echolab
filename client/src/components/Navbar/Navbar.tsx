@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 export default function Navbar() {
 
     const [scrolled, setScrolled] = useState(false);
+    const [megaOpen, setMegaOpen] = useState(false)
+
 
     useEffect(() => {
         const handleScroll = () => {
@@ -17,6 +19,10 @@ export default function Navbar() {
             window.removeEventListener("scroll", handleScroll);
         };
     }, []);
+
+    useEffect(() => {
+        setMegaOpen(false)
+    }, [location])
 
     return (
 
@@ -73,7 +79,113 @@ export default function Navbar() {
                 </span>
             </Link>
             <ul className="hidden md:flex items-center gap-1">
-                <li><button>Products</button></li>
+                <li
+                    className="position-relative"
+                    onMouseEnter={() => setMegaOpen(true)}
+                    onMouseLeave={() => setMegaOpen(false)}
+                >
+                    <button
+                        type="button"
+                        className="flex items-center gap-1
+  rounded-lg
+  border-none
+  bg-transparent
+  px-3.5 py-2
+  font-medium
+  font-sans
+  transition-colors
+  duration-200
+  hover:text-primary"
+                    >
+                        Products
+
+                        <svg
+                            className={`transition-transform duration-200 ${megaOpen ? "rotate-180" : ""}`}
+                            width="10"
+                            height="6"
+                            viewBox="0 0 10 6"
+                            fill="none"
+                        >
+                            <path
+                                d="M1 1L5 5L9 1"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                            />
+                        </svg>
+                    </button>
+
+                    {megaOpen && (
+                        <div
+                            className="
+      fixed
+      inset-x-0
+      top-20
+      z-40
+      bg-surface
+      border-b
+      border-border
+      shadow-[0_20px_60px_rgba(0,0,0,0.5)]
+    "
+                        >
+                            <div className="container-wide p-8">
+                                <div className="grid grid-cols-5 gap-4">
+                                    <Link to="/" className="
+  px-4
+  py-3.5
+  rounded-[10px]
+  border
+  border-transparent
+  transition-all
+  duration-150
+  cursor-pointer
+">Synths</Link>
+                                    <Link to="/" className="
+  px-4
+  py-3.5
+  rounded-[10px]
+  border
+  border-transparent
+  transition-all
+  duration-150
+  cursor-pointer
+">Drum Machines</Link>
+                                    <Link to="/" className="
+  px-4
+  py-3.5
+  rounded-[10px]
+  border
+  border-transparent
+  transition-all
+  duration-150
+  cursor-pointer
+">Effects</Link>
+                                    <Link to="/" className="
+  px-4
+  py-3.5
+  rounded-[10px]
+  border
+  border-transparent
+  transition-all
+  duration-150
+  cursor-pointer
+">Controllers</Link>
+                                    <Link to="/" className="
+  px-4
+  py-3.5
+  rounded-[10px]
+  border
+  border-transparent
+  transition-all
+  duration-150
+  cursor-pointer
+">Studio</Link>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </li>
+
                 {[
                     { to: "/about", label: "About" },
                     { to: "/contact", label: "Contact" },
@@ -82,8 +194,13 @@ export default function Navbar() {
                         <NavLink
                             to={link.to}
                             className={({ isActive }) => `
-  px-3.5 py-2
+  rounded-lg
+  px-3.5
+  py-2
+  font-medium
+  font-sans
   transition-colors
+  duration-200
           ${isActive
                                     ? "text-primary"
                                     : "text-text"
