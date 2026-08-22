@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
+import ProductCard from "../../components/ProductCard";
+import type { Product } from "../../types/Product";
 
-interface Product {
-  id: string
-  name: string
-  tagline: string
-  price: number
-  image: string
-}
 
 export default function ProductListingPage() {
 
@@ -37,20 +32,13 @@ export default function ProductListingPage() {
   }, [])
 
   return (
-    <div>
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
       {products.map((product) => (
-        <div key={product.id}>
-          <img
-            src={product.image}
-            alt={product.name}
-          />
-
-          <h3>{product.name}</h3>
-
-          <p>{product.tagline}</p>
-
-          <p>€{product.price}</p>
-        </div>
-      ))}    </div>
+        <ProductCard
+          key={product.id}
+          product={product}
+        />
+      ))}
+    </div>
   );
 }
