@@ -15,11 +15,14 @@
 
   --theme-text: #ffffff;
   --theme-text-muted: #a8a8a8;
+  --theme-text-success: #22c55e;
 
   --theme-border: rgba(255, 255, 255, 0.08);
   --theme-border-strong: rgba(255, 255, 255, 0.14);
 
   --theme-primary: #3b82f6;
+  --theme-hover: #2563eb;
+
 }
 
 .light {
@@ -29,11 +32,14 @@
 
   --theme-text: #111111;
   --theme-text-muted: #666666;
+  --theme-text-success: #22c55e;
+
 
   --theme-border: rgba(0, 0, 0, 0.08);
   --theme-border-strong: rgba(0, 0, 0, 0.14);
 
   --theme-primary: #3b82f6;
+  --theme-hover: #2563eb;
 }
 
 /* ===========================
@@ -51,11 +57,13 @@
 
   --color-text: var(--theme-text);
   --color-text-muted: var(--theme-text-muted);
+  --color-text-success: var(--theme-text-success);
 
   --color-border: var(--theme-border);
   --color-border-strong: var(--theme-border-strong);
 
   --color-primary: var(--theme-primary);
+  --color-hover: var(--theme-hover);
 }
 
 /* ===========================
@@ -85,4 +93,31 @@ body {
 :focus-visible {
   outline: 2px solid var(--theme-primary);
   outline-offset: 2px;
+}
+
+/* ===========================
+   Layout
+=========================== */
+
+.section-pad {
+  padding: 96px 0;
+}
+
+@media (max-width: 768px) {
+  .section-pad {
+    padding: 64px 0;
+  }
+}
+
+.container-wide {
+  width: 100%;
+  max-width: 1360px;
+  margin-inline: auto;
+  padding-inline: 2rem;
+}
+
+@media (max-width: 768px) {
+  .container-wide {
+    padding-inline: 1.25rem;
+  }
 }
