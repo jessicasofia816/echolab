@@ -26,6 +26,23 @@ db.pragma("foreign_keys = ON");
 
 // --- hämta produkter ---
 app.get("/api/products", (_req, res) => {
+
+  const category = _req.query.category
+
+  if (category) {
+    const products = db
+      .prepare("SELECT * FROM products WHERE category_id = ?")
+      .all(category)
+
+    return res.json(products)
+  }
+
   const products = db.prepare("SELECT * FROM products").all();
   res.json(products);
+});
+
+// --- hämta kategorier ---
+app.get("/api/categories", (_req, res) => {
+  const categories = db.prepare("SELECT * FROM categories").all();
+  res.json(categories);
 });
