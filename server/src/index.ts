@@ -25,21 +25,47 @@ db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 
 // --- hämta produkter ---
-app.get("/api/products", (_req, res) => {
+app.get("/api/products", (req, res) => {
+  const category = req.query.category
+  const sort = req.query.sort
 
-  const category = _req.query.category
+  let sql = "SELECT * FROM products"
+  const params: string[] = []
 
   if (category) {
-    const products = db
-      .prepare("SELECT * FROM products WHERE category_id = ?")
-      .all(category)
-
-    return res.json(products)
+    sql += " WHERE category_id = ?"
+    params.push(String(category))
   }
 
-  const products = db.prepare("SELECT * FROM products").all();
-  res.json(products);
-});
+  switch (sort) {
+    case "price-asc":
+      sql += " ORDER BY price ASC"
+      break
+
+    case "price-desc":
+      sql += " ORDER BY price DESC"
+      break
+
+    case "rating":
+      sql += " ORDER BY rating DESC"
+      break
+
+    case "newest":
+      sql += " ORDER BY is_new DESC"
+      break
+
+    case "featured":
+    default:
+      sql += " ORDER BY featured DESC"
+      break
+  }
+
+  const products = db
+    .prepare(sql)
+    .all(...params)
+
+  res.json(products)
+})
 
 // --- hämta kategorier ---
 app.get("/api/categories", (_req, res) => {

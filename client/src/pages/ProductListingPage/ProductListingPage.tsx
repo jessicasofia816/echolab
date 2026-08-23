@@ -44,6 +44,7 @@ export default function ProductListingPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [selectedCategory, setSelectedCategory] = useState("")
   const [categories, setCategories] = useState<Category[]>([])
+  const [sortBy, setSortBy] = useState("featured")
 
 
   useEffect(() => {
@@ -53,6 +54,10 @@ export default function ProductListingPage() {
 
         if (selectedCategory) {
           params.set("category", selectedCategory)
+        }
+
+        if (sortBy) {
+          params.set("sort", sortBy)
         }
 
         const response = await fetch(
@@ -74,7 +79,7 @@ export default function ProductListingPage() {
     }
 
     getProducts()
-  }, [API_URL, selectedCategory])
+  }, [API_URL, selectedCategory, sortBy])
 
 
   useEffect(() => {
@@ -123,6 +128,17 @@ export default function ProductListingPage() {
           </div>
         </div>
       </aside>
+      <select
+        value={sortBy}
+        onChange={(e) => setSortBy(e.target.value)}
+        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text"
+      >
+        <option value="featured">Featured</option>
+        <option value="newest">Newest</option>
+        <option value="price-asc">Price: Low to High</option>
+        <option value="price-desc">Price: High to Low</option>
+        <option value="rating">Top Rated</option>
+      </select>
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
         {products.map((product) => (
           <ProductCard
