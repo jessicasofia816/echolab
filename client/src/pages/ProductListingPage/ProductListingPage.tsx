@@ -47,7 +47,7 @@ export default function ProductListingPage() {
   const [sortBy, setSortBy] = useState("featured")
   const [inStockOnly, setInStockOnly] = useState(false)
   const [selectedBadge, setSelectedBadge] = useState("")
-  const [maxPrice, setMaxPrice] = useState("")
+  const [maxPrice, setMaxPrice] = useState("5000")
 
 
   useEffect(() => {
@@ -185,17 +185,24 @@ export default function ProductListingPage() {
             </div>
           </div>
           <div className="mb-8">
-            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
-              Max Price
-            </p>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
+                Max Price
+              </p>
+
+              <span className="text-sm font-medium text-text">
+                {maxPrice} €
+              </span>
+            </div>
 
             <input
-              type="number"
+              type="range"
               min="0"
-              placeholder="No limit"
+              max="10000"
+              step="100"
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text"
+              className="w-full cursor-pointer accent-primary"
             />
           </div>
           <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
