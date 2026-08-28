@@ -28,13 +28,24 @@ db.pragma("foreign_keys = ON");
 app.get("/api/products", (req, res) => {
   const category = req.query.category
   const sort = req.query.sort
+  const inStock = req.query.inStock
 
   let sql = "SELECT * FROM products"
   const params: string[] = []
+  const conditions: string[] = []
+
 
   if (category) {
     sql += " WHERE category_id = ?"
     params.push(String(category))
+  }
+
+  if (inStock === "true") {
+    conditions.push("in_stock = 1")
+  }
+
+  if (conditions.length > 0) {
+    sql += ` WHERE ${conditions.join(" AND ")}`
   }
 
   switch (sort) {

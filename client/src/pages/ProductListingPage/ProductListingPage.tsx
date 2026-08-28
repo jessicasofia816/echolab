@@ -45,6 +45,7 @@ export default function ProductListingPage() {
   const [selectedCategory, setSelectedCategory] = useState("")
   const [categories, setCategories] = useState<Category[]>([])
   const [sortBy, setSortBy] = useState("featured")
+  const [inStockOnly, setInStockOnly] = useState(false)
 
 
   useEffect(() => {
@@ -58,6 +59,10 @@ export default function ProductListingPage() {
 
         if (sortBy) {
           params.set("sort", sortBy)
+        }
+
+        if (inStockOnly) {
+          params.set("inStock", "true")
         }
 
         const response = await fetch(
@@ -79,7 +84,7 @@ export default function ProductListingPage() {
     }
 
     getProducts()
-  }, [API_URL, selectedCategory, sortBy])
+  }, [API_URL, selectedCategory, sortBy, inStockOnly])
 
 
   useEffect(() => {
@@ -126,6 +131,18 @@ export default function ProductListingPage() {
               />
             ))}
           </div>
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
+            AVAILABILITY
+          </p>
+          <label className="flex items-center gap-2 text-sm text-text-muted">
+            <input
+              type="checkbox"
+              checked={inStockOnly}
+              onChange={(e) => setInStockOnly(e.target.checked)}
+            />
+
+            In Stock Only
+          </label>
         </div>
       </aside>
       <select
