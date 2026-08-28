@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import ProductCard from "../../components/ProductCard";
 import type { Product } from "../../types/Product";
 import type { Category } from "../../types/Category";
+import { Link } from "react-router";
 
 interface FilterItemProps {
   label: string
@@ -117,127 +118,215 @@ export default function ProductListingPage() {
     getCategories()
   }, [API_URL])
 
+  const activeCategoryData = categories.find(
+    (category) => category.id === selectedCategory
+  )
+
   return (
-    <div>
-      <aside>
-        <div className="mb-8">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
-            Categories
-          </p>
+    <div className="min-h-screen bg-bg">
+      {/* Page header */}
+      <div className="border-b border-border bg-surface px-0 pb-8 pt-12">
+        <div className="container-wide">
+          <nav className="mb-4 flex items-center gap-2 text-[13px] text-text-muted">
+            <Link
+              to="/"
+              className="text-text-muted no-underline hover:text-text"
+            >
+              Home
+            </Link>
 
-          <div className="flex flex-col gap-0.5">
-            <FilterItem
-              label="All Products"
-              active={selectedCategory === ""}
-              onClick={() => setSelectedCategory("")}
-            />
+            <span>/</span>
 
-            {categories.map((category) => (
-              <FilterItem
-                key={category.id}
-                label={category.name}
-                active={selectedCategory === category.id}
-                onClick={() => setSelectedCategory(category.id)}
-              />
-            ))}
-          </div>
-          <div className="mb-8">
-            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
-              Badge
+            {(selectedCategory || selectedBadge) && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory("")
+                    setSelectedBadge("")
+                  }}
+                  className="text-text-muted hover:text-text"
+                >
+                  All Products
+                </button>
+
+                <span>/</span>
+              </>
+            )}
+
+            <span className="text-text">
+              {activeCategoryData?.name ||
+                (selectedBadge ? `${selectedBadge} Products` : "All Products")}
+            </span>
+          </nav>
+
+          <h1
+            className="
+        mb-2
+        font-serif
+        text-[clamp(28px,4vw,48px)]
+        font-normal
+        tracking-[-0.02em]
+        text-text
+      "
+          >
+            {activeCategoryData?.name ||
+              (selectedBadge ? `${selectedBadge} Products` : "All Products")}
+          </h1>
+
+          {activeCategoryData && (
+            <p className="text-text-muted">
+              {activeCategoryData.description}
             </p>
+          )}
 
-            <div className="flex flex-col gap-0.5">
-              <FilterItem
-                label="All"
-                active={selectedBadge === ""}
-                onClick={() => setSelectedBadge("")}
-              />
-
-              <FilterItem
-                label="New"
-                active={selectedBadge === "New"}
-                onClick={() => setSelectedBadge("New")}
-              />
-
-              <FilterItem
-                label="Sale"
-                active={selectedBadge === "Sale"}
-                onClick={() => setSelectedBadge("Sale")}
-              />
-
-              <FilterItem
-                label="Best Seller"
-                active={selectedBadge === "Best Seller"}
-                onClick={() => setSelectedBadge("Best Seller")}
-              />
-
-              <FilterItem
-                label="Limited"
-                active={selectedBadge === "Limited"}
-                onClick={() => setSelectedBadge("Limited")}
-              />
-
-              <FilterItem
-                label="Staff Pick"
-                active={selectedBadge === "Staff Pick"}
-                onClick={() => setSelectedBadge("Staff Pick")}
-              />
-            </div>
-          </div>
-          <div className="mb-8">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
-                Max Price
-              </p>
-
-              <span className="text-sm font-medium text-text">
-                {maxPrice} €
-              </span>
-            </div>
-
-            <input
-              type="range"
-              min="0"
-              max="10000"
-              step="100"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              className="w-full cursor-pointer accent-primary"
-            />
-          </div>
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
-            AVAILABILITY
+          <p className="mt-1 text-[14px] text-text-muted">
+            {products.length} product{products.length !== 1 ? "s" : ""}
           </p>
-          <label className="flex items-center gap-2 text-sm text-text-muted">
-            <input
-              type="checkbox"
-              checked={inStockOnly}
-              onChange={(e) => setInStockOnly(e.target.checked)}
-            />
 
-            In Stock Only
-          </label>
         </div>
-      </aside>
-      <select
-        value={sortBy}
-        onChange={(e) => setSortBy(e.target.value)}
-        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text"
-      >
-        <option value="featured">Featured</option>
-        <option value="newest">Newest</option>
-        <option value="price-asc">Price: Low to High</option>
-        <option value="price-desc">Price: High to Low</option>
-        <option value="rating">Top Rated</option>
-      </select>
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-        {products.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-          />
-        ))}
       </div>
+      <div className="container-wide pt-10 pb-20">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-[220px_1fr] items-start">
+          {/* Sidebar filter */}
+          <aside>
+            <div className="mb-8">
+              <div className="mb-8">
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
+                  Categories
+                </p>
+
+                <div className="flex flex-col gap-0.5">
+                  <FilterItem
+                    label="All Products"
+                    active={selectedCategory === ""}
+                    onClick={() => setSelectedCategory("")}
+                  />
+
+                  {categories.map((category) => (
+                    <FilterItem
+                      key={category.id}
+                      label={category.name}
+                      active={selectedCategory === category.id}
+                      onClick={() => setSelectedCategory(category.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="mb-8">
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
+                  Special
+                </p>
+
+                <div className="flex flex-col gap-0.5">
+                  <FilterItem
+                    label="All"
+                    active={selectedBadge === ""}
+                    onClick={() => setSelectedBadge("")}
+                  />
+
+                  <FilterItem
+                    label="New"
+                    active={selectedBadge === "New"}
+                    onClick={() => setSelectedBadge("New")}
+                  />
+
+                  <FilterItem
+                    label="Sale"
+                    active={selectedBadge === "Sale"}
+                    onClick={() => setSelectedBadge("Sale")}
+                  />
+
+                  <FilterItem
+                    label="Best Seller"
+                    active={selectedBadge === "Best Seller"}
+                    onClick={() => setSelectedBadge("Best Seller")}
+                  />
+
+                  <FilterItem
+                    label="Limited"
+                    active={selectedBadge === "Limited"}
+                    onClick={() => setSelectedBadge("Limited")}
+                  />
+
+                  <FilterItem
+                    label="Staff Pick"
+                    active={selectedBadge === "Staff Pick"}
+                    onClick={() => setSelectedBadge("Staff Pick")}
+                  />
+                </div>
+              </div>
+              <div className="mb-8">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
+                    Max Price
+                  </p>
+
+                  <span className="text-sm font-medium text-text">
+                    {maxPrice} €
+                  </span>
+                </div>
+
+                <input
+                  type="range"
+                  min="0"
+                  max="10000"
+                  step="100"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  className="w-full cursor-pointer accent-primary"
+                />
+              </div>
+              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
+                AVAILABILITY
+              </p>
+              <label className="flex items-center gap-2 text-sm text-text-muted">
+                <input
+                  type="checkbox"
+                  checked={inStockOnly}
+                  onChange={(e) => setInStockOnly(e.target.checked)}
+                />
+
+                In Stock Only
+              </label>
+            </div>
+          </aside>
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center justify-between gap-3 mb-6 pb-5 border-b border-border flex-wrap">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-text-muted">
+                  Showing <strong className="text-text">{products.length}</strong> results
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-text-muted">Sort:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text"
+                >
+                  <option value="featured">Featured</option>
+                  <option value="newest">Newest</option>
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
+                  <option value="rating">Top Rated</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
+
   );
 }
