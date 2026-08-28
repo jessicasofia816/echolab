@@ -46,6 +46,8 @@ export default function ProductListingPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [sortBy, setSortBy] = useState("featured")
   const [inStockOnly, setInStockOnly] = useState(false)
+  const [selectedBadge, setSelectedBadge] = useState("")
+  const [maxPrice, setMaxPrice] = useState("")
 
 
   useEffect(() => {
@@ -57,12 +59,20 @@ export default function ProductListingPage() {
           params.set("category", selectedCategory)
         }
 
-        if (sortBy) {
-          params.set("sort", sortBy)
-        }
-
         if (inStockOnly) {
           params.set("inStock", "true")
+        }
+
+        if (selectedBadge) {
+          params.set("badge", selectedBadge)
+        }
+
+        if (maxPrice) {
+          params.set("maxPrice", maxPrice)
+        }
+
+        if (sortBy) {
+          params.set("sort", sortBy)
         }
 
         const response = await fetch(
@@ -84,7 +94,7 @@ export default function ProductListingPage() {
     }
 
     getProducts()
-  }, [API_URL, selectedCategory, sortBy, inStockOnly])
+  }, [API_URL, selectedCategory, sortBy, inStockOnly, selectedBadge, maxPrice])
 
 
   useEffect(() => {
@@ -130,6 +140,63 @@ export default function ProductListingPage() {
                 onClick={() => setSelectedCategory(category.id)}
               />
             ))}
+          </div>
+          <div className="mb-8">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
+              Badge
+            </p>
+
+            <div className="flex flex-col gap-0.5">
+              <FilterItem
+                label="All"
+                active={selectedBadge === ""}
+                onClick={() => setSelectedBadge("")}
+              />
+
+              <FilterItem
+                label="New"
+                active={selectedBadge === "New"}
+                onClick={() => setSelectedBadge("New")}
+              />
+
+              <FilterItem
+                label="Sale"
+                active={selectedBadge === "Sale"}
+                onClick={() => setSelectedBadge("Sale")}
+              />
+
+              <FilterItem
+                label="Best Seller"
+                active={selectedBadge === "Best Seller"}
+                onClick={() => setSelectedBadge("Best Seller")}
+              />
+
+              <FilterItem
+                label="Limited"
+                active={selectedBadge === "Limited"}
+                onClick={() => setSelectedBadge("Limited")}
+              />
+
+              <FilterItem
+                label="Staff Pick"
+                active={selectedBadge === "Staff Pick"}
+                onClick={() => setSelectedBadge("Staff Pick")}
+              />
+            </div>
+          </div>
+          <div className="mb-8">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
+              Max Price
+            </p>
+
+            <input
+              type="number"
+              min="0"
+              placeholder="No limit"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text"
+            />
           </div>
           <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
             AVAILABILITY

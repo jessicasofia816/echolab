@@ -29,25 +29,42 @@ app.get("/api/products", (req, res) => {
   const category = req.query.category
   const sort = req.query.sort
   const inStock = req.query.inStock
+  const badge = req.query.badge
+  const maxPrice = req.query.maxPrice
 
   let sql = "SELECT * FROM products"
-  const params: string[] = []
+
   const conditions: string[] = []
+  const params: unknown[] = []
 
-
+  // Category
   if (category) {
-    sql += " WHERE category_id = ?"
+    conditions.push("category_id = ?")
     params.push(String(category))
   }
 
+  // In stock
   if (inStock === "true") {
     conditions.push("in_stock = 1")
+  }
+
+  // Badge
+  if (badge) {
+    conditions.push("badge = ?")
+    params.push(String(badge))
+  }
+
+  // Max Price
+  if (maxPrice) {
+    conditions.push("price <= ?")
+    params.push(Number(maxPrice))
   }
 
   if (conditions.length > 0) {
     sql += ` WHERE ${conditions.join(" AND ")}`
   }
 
+  // Sorting
   switch (sort) {
     case "price-asc":
       sql += " ORDER BY price ASC"
@@ -83,3 +100,4 @@ app.get("/api/categories", (_req, res) => {
   const categories = db.prepare("SELECT * FROM categories").all();
   res.json(categories);
 });
+
