@@ -8,7 +8,7 @@ export interface Product {
   original_price: number | null
 
   image: string
-  images: string
+  images: string[]
 
   badge: 'New' | 'Sale' | 'Best Seller' | 'Limited' | 'Staff Pick' | null
 
@@ -23,8 +23,11 @@ export interface Product {
 
   description: string
 
-  features: string
-  specs: string
-  tags: string
-  colors: string | null
+  features: string[]
+  specs: {
+    label: string
+    value: string
+  }[]
+  tags: string[]
+  colors: string[] | null
 }

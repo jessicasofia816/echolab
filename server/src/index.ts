@@ -24,6 +24,32 @@ const db = new Database("./src/db/database.db", { verbose: console.log });
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 
+function formatProduct(product: any) {
+  return {
+    ...product,
+
+    images: product.images
+      ? JSON.parse(product.images)
+      : [],
+
+    features: product.features
+      ? JSON.parse(product.features)
+      : [],
+
+    specs: product.specs
+      ? JSON.parse(product.specs)
+      : {},
+
+    tags: product.tags
+      ? JSON.parse(product.tags)
+      : [],
+
+    colors: product.colors
+      ? JSON.parse(product.colors)
+      : null,
+  }
+}
+
 // --- hämta produkter ---
 app.get("/api/products", (req, res) => {
   const category = req.query.category
@@ -92,7 +118,7 @@ app.get("/api/products", (req, res) => {
     .prepare(sql)
     .all(...params)
 
-  res.json(products)
+  res.json(products.map(formatProduct))
 })
 
 // --- hämta kategorier ---
@@ -101,3 +127,17 @@ app.get("/api/categories", (_req, res) => {
   res.json(categories);
 });
 
+// --- hämta produkt med id ---
+app.get("/api/products/:id", (req, res) => {
+  const productId = req.params.id;
+  const product = db
+    .prepare("SELECT * FROM products WHERE id = ?")
+    .get(productId);
+
+  if (!product) {
+    res.status(404).json({ error: "Product not found" });
+    return;
+  }
+
+  res.json(formatProduct(product));
+});
