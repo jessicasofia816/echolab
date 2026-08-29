@@ -5,6 +5,7 @@ import MainLayout from './pages/layouts/MainLayout'
 import About from './pages/About/About'
 import ProductListingPage from './pages/ProductListingPage/ProductListingPage'
 import ProductDetailPage from './pages/ProductDetailPage/ProductDetailPage'
+import CartPage from './pages/CartPage/CartPage'
 
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/products" element={<ProductListingPage />} />
         <Route path="/products/:id" element={<ProductDetailPage />} />
+        <Route path="/cart" element={<CartPage />} />
       </Route>
     </Routes>
     </>

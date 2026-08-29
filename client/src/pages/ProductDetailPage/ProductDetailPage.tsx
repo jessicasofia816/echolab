@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router"
 import type { Product } from "../../types/Product"
+import { useCart } from "../../context/CartContext"
 
 type ProductTab = "overview" | "specs" | "reviews"
 
 export default function ProductDetailPage() {
     const API_URL = import.meta.env.VITE_API_URL
     const { id } = useParams()
+    const { addToCart } = useCart()
+
 
     const [product, setProduct] = useState<Product | null>(null)
     const [activeImage, setActiveImage] = useState(0)
@@ -352,6 +355,7 @@ export default function ProductDetailPage() {
                         <div className="mt-5 flex gap-3">
                             <button
                                 type="button"
+                                onClick={() => addToCart(product.id, qty)}
                                 disabled={!product.in_stock}
                                 className="
                                 flex-1

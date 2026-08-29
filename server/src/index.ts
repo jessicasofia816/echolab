@@ -3,10 +3,26 @@ const app = express();
 app.use(express.json());
 import Database from "better-sqlite3";
 import cors from "cors";
+import session from "express-session"
 
 app.use(
   cors({
     origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "dev-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    },
+
   })
 );
 
@@ -141,3 +157,114 @@ app.get("/api/products/:id", (req, res) => {
 
   res.json(formatProduct(product));
 });
+
+// --- hämta varukorg ---
+app.get("/api/cart", (req, res) => {
+  if (!req.session.cart) {
+    req.session.cart = []
+  }
+
+  const cartItems = req.session.cart
+    .map((item) => {
+      const product = db
+        .prepare("SELECT * FROM products WHERE id = ?")
+        .get(item.productId)
+
+      if (!product) {
+        return null
+      }
+
+      return {
+        productId: item.productId,
+        quantity: item.quantity,
+        product: formatProduct(product),
+      }
+    })
+    .filter((item) => item !== null)
+
+  res.json(cartItems)
+})
+
+// --- lägg till i varukorg ---
+app.post("/api/cart", (req, res) => {
+  const { productId, quantity = 1 } = req.body
+
+  if (!productId) {
+    return res.status(400).json({
+      message: "productId is required",
+    })
+  }
+
+  if (!req.session.cart) {
+    req.session.cart = []
+  }
+
+  const existingItem = req.session.cart.find(
+    (item) => item.productId === productId
+  )
+
+  if (existingItem) {
+    existingItem.quantity += quantity
+  } else {
+    req.session.cart.push({
+      productId,
+      quantity,
+    })
+  }
+
+  res.status(201).json(req.session.cart)
+})
+
+// --- ta bort från varukorg ---
+app.delete("/api/cart/:productId", (req, res) => {
+  const { productId } = req.params
+
+  if (!req.session.cart) {
+    req.session.cart = []
+  }
+
+  req.session.cart = req.session.cart.filter(
+    (item) => item.productId !== productId
+  )
+
+  res.json(req.session.cart)
+})
+
+// --- töm varukorg ---
+app.delete("/api/cart", (req, res) => {
+  req.session.cart = []
+  res.json(req.session.cart)
+})
+
+// --- uppdatera kvantitet i varukorg ---
+app.patch("/api/cart/:productId", (req, res) => {
+  const { productId } = req.params
+  const { quantity } = req.body
+
+  if (!req.session.cart) {
+    req.session.cart = []
+  }
+
+  if (
+    typeof quantity !== "number" ||
+    quantity < 1
+  ) {
+    return res.status(400).json({
+      message: "quantity must be at least 1",
+    })
+  }
+
+  const item = req.session.cart.find(
+    (item) => item.productId === productId
+  )
+
+  if (!item) {
+    return res.status(404).json({
+      message: "Product not found in cart",
+    })
+  }
+
+  item.quantity = quantity
+
+  res.json(req.session.cart)
+})
