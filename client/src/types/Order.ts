@@ -13,5 +13,20 @@ export type Order = {
   tax: number
   total: number
   created_at: string
+
+  contact: {
+    firstName: string | null
+    lastName: string | null
+    email: string | null
+    phone: string | null
+  }
+
+  shippingAddress: {
+    address: string | null
+    city: string | null
+    postcode: string | null
+    country: string | null
+  }
+
   items: OrderItem[]
 }

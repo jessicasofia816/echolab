@@ -4,7 +4,6 @@ import { useAuth } from "../../context/AuthContext"
 import { useWishlist } from "../../context/WishlistContext"
 import ProductCard from "../../components/ProductCard"
 import { useCart } from "../../context/CartContext"
-import type { OrderItem } from "../../types/Order"
 import type { Order } from "../../types/Order"
 
 type AccountTab =
@@ -377,112 +376,194 @@ export default function AccountPage() {
                 {/* ORDERS */}
                 {activeTab === "orders" && (
                     <section>
-                        <h2 className="mb-6 font-serif text-2xl text-text">
-                            Your Orders
-                        </h2>
+                        <div className="mb-6">
+                            <h2 className="text-2xl font-bold text-text">
+                                Orders
+                            </h2>
+
+                            <p className="mt-1 text-sm text-text-muted">
+                                View your previous EchoLab orders.
+                            </p>
+                        </div>
 
                         {ordersLoading ? (
-                            <p className="text-sm text-text-muted">
-                                Loading orders...
-                            </p>
+                            <div className="rounded-2xl border border-border bg-surface p-8">
+                                <p className="text-sm text-text-muted">
+                                    Loading orders...
+                                </p>
+                            </div>
                         ) : orders.length === 0 ? (
-                            <div className="rounded-2xl border border-border bg-surface px-6 py-16 text-center">
-                                <div className="mb-4 text-4xl">
-                                    📦
-                                </div>
-
-                                <h3 className="text-lg font-semibold text-text">
+                            <div className="rounded-2xl border border-border bg-surface p-8 text-center">
+                                <h3 className="font-semibold text-text">
                                     No orders yet
                                 </h3>
 
                                 <p className="mt-2 text-sm text-text-muted">
-                                    Your order history will appear here.
+                                    When you place an order, it will appear here.
                                 </p>
 
                                 <Link
                                     to="/products"
-                                    className="
-            mt-6
-            inline-flex
-            rounded-xl
-            bg-primary
-            px-5
-            py-3
-            text-sm
-            font-semibold
-            text-white
-            no-underline
-            transition-opacity
-            hover:opacity-90
-          "
+                                    className="mt-5 inline-block rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white no-underline"
                                 >
                                     Browse Products
                                 </Link>
                             </div>
                         ) : (
-                            <div className="space-y-4">
+                            <div className="space-y-5">
                                 {orders.map((order) => (
                                     <article
                                         key={order.id}
-                                        className="rounded-2xl border border-border bg-surface p-5 sm:p-6"
+                                        className="overflow-hidden rounded-2xl border border-border bg-surface"
                                     >
-                                        {/* Header */}
-                                        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
+                                        {/* Order header */}
+                                        <div className="flex flex-col gap-4 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
                                             <div>
-                                                <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-                                                    Order
-                                                </p>
+                                                <div className="flex flex-wrap items-center gap-3">
+                                                    <h3 className="font-bold text-text">
+                                                        Order #{order.id}
+                                                    </h3>
 
-                                                <p className="mt-1 font-mono font-bold text-text">
-                                                    #{order.id}
-                                                </p>
+                                                    <span className="rounded-full border border-border bg-surface-2 px-3 py-1 text-xs font-semibold text-text-muted">
+                                                        {order.status}
+                                                    </span>
+                                                </div>
 
-                                                <p className="mt-1 text-xs text-text-muted">
-                                                    {new Date(
-                                                        order.created_at
-                                                    ).toLocaleDateString()}
+                                                <p className="mt-1 text-sm text-text-muted">
+                                                    {new Date(order.created_at).toLocaleDateString(
+                                                        "en-GB",
+                                                        {
+                                                            day: "numeric",
+                                                            month: "long",
+                                                            year: "numeric",
+                                                        }
+                                                    )}
                                                 </p>
                                             </div>
 
-                                            <div className="text-right">
-                                                <span className="inline-flex rounded-md bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                                                    {order.status}
-                                                </span>
+                                            <div className="sm:text-right">
+                                                <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+                                                    Total
+                                                </p>
 
-                                                <p className="mt-2 font-mono text-lg font-bold text-text">
-                                                    €{order.total.toLocaleString()}
+                                                <p className="mt-1 font-mono text-lg font-bold text-text">
+                                                    €{order.total.toFixed(2)}
                                                 </p>
                                             </div>
                                         </div>
 
                                         {/* Products */}
-                                        <div className="divide-y divide-border">
-                                            {order.items.map((item) => (
-                                                <div
-                                                    key={item.product_id}
-                                                    className="flex items-center justify-between gap-4 py-4"
-                                                >
-                                                    <div>
-                                                        <Link
-                                                            to={`/products/${item.product_id}`}
-                                                            className="text-sm font-semibold text-text no-underline hover:text-primary"
-                                                        >
-                                                            {item.product_name}
-                                                        </Link>
+                                        <div className="p-5">
+                                            <h4 className="mb-4 text-sm font-bold text-text">
+                                                Items
+                                            </h4>
 
-                                                        <p className="mt-1 text-xs text-text-muted">
-                                                            Qty {item.quantity}
-                                                        </p>
+                                            <div className="space-y-3">
+                                                {order.items.map((item) => (
+                                                    <div
+                                                        key={item.product_id}
+                                                        className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-2 p-4"
+                                                    >
+                                                        <div className="min-w-0">
+                                                            <Link
+                                                                to={`/products/${item.product_id}`}
+                                                                className="font-semibold text-text no-underline hover:text-primary"
+                                                            >
+                                                                {item.product_name}
+                                                            </Link>
+
+                                                            <p className="mt-1 text-xs text-text-muted">
+                                                                Quantity: {item.quantity}
+                                                            </p>
+                                                        </div>
+
+                                                        <span className="shrink-0 font-mono text-sm font-semibold text-text">
+                                                            €
+                                                            {(item.price * item.quantity).toFixed(
+                                                                2
+                                                            )}
+                                                        </span>
                                                     </div>
+                                                ))}
+                                            </div>
+                                        </div>
 
-                                                    <span className="shrink-0 font-mono text-sm text-text">
-                                                        €
-                                                        {(
-                                                            item.price * item.quantity
-                                                        ).toLocaleString()}
+                                        {/* Shipping + contact */}
+                                        <div className="grid gap-6 border-t border-border p-5 md:grid-cols-2">
+                                            <div>
+                                                <h4 className="text-sm font-bold text-text">
+                                                    Contact
+                                                </h4>
+
+                                                <div className="mt-3 space-y-1 text-sm text-text-muted">
+                                                    <p>
+                                                        {order.contact.firstName}{" "}
+                                                        {order.contact.lastName}
+                                                    </p>
+
+                                                    <p>
+                                                        {order.contact.email}
+                                                    </p>
+
+                                                    {order.contact.phone && (
+                                                        <p>
+                                                            {order.contact.phone}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <h4 className="text-sm font-bold text-text">
+                                                    Shipping address
+                                                </h4>
+
+                                                <div className="mt-3 space-y-1 text-sm text-text-muted">
+                                                    <p>
+                                                        {order.shippingAddress.address}
+                                                    </p>
+
+                                                    <p>
+                                                        {order.shippingAddress.postcode}{" "}
+                                                        {order.shippingAddress.city}
+                                                    </p>
+
+                                                    <p>
+                                                        {order.shippingAddress.country}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Price breakdown */}
+                                        <div className="border-t border-border bg-surface-2 p-5">
+                                            <div className="ml-auto max-w-xs space-y-2 text-sm">
+                                                <OrderPriceRow
+                                                    label="Subtotal"
+                                                    value={order.subtotal}
+                                                />
+
+                                                <OrderPriceRow
+                                                    label="Shipping"
+                                                    value={order.shipping}
+                                                    free={order.shipping === 0}
+                                                />
+
+                                                <OrderPriceRow
+                                                    label="VAT"
+                                                    value={order.tax}
+                                                />
+
+                                                <div className="flex items-center justify-between border-t border-border pt-3">
+                                                    <span className="font-bold text-text">
+                                                        Total
+                                                    </span>
+
+                                                    <span className="font-mono font-bold text-text">
+                                                        €{order.total.toFixed(2)}
                                                     </span>
                                                 </div>
-                                            ))}
+                                            </div>
                                         </div>
                                     </article>
                                 ))}
@@ -637,6 +718,34 @@ function StatCard({
             <p className="font-mono text-2xl font-bold tracking-tight text-text">
                 {value}
             </p>
+        </div>
+    )
+}
+function OrderPriceRow({
+    label,
+    value,
+    free = false,
+}: {
+    label: string
+    value: number
+    free?: boolean
+}) {
+    return (
+        <div className="flex items-center justify-between">
+            <span className="text-text-muted">
+                {label}
+            </span>
+
+            <span
+                className={`font-mono ${free
+                        ? "font-semibold text-green-500"
+                        : "text-text"
+                    }`}
+            >
+                {free
+                    ? "Free"
+                    : `€${value.toFixed(2)}`}
+            </span>
         </div>
     )
 }

@@ -565,7 +565,29 @@ app.post("/api/orders", (req, res) => {
     })
   }
 
-  if (!req.session.cart || req.session.cart.length === 0) {
+  const {
+    contact,
+    shipping: shippingDetails,
+  } = req.body
+
+  if (
+    !contact?.firstName ||
+    !contact?.lastName ||
+    !contact?.email ||
+    !shippingDetails?.address ||
+    !shippingDetails?.city ||
+    !shippingDetails?.postcode ||
+    !shippingDetails?.country
+  ) {
+    return res.status(400).json({
+      message: "Missing checkout information",
+    })
+  }
+
+  if (
+    !req.session.cart ||
+    req.session.cart.length === 0
+  ) {
     return res.status(400).json({
       message: "Cart is empty",
     })
@@ -575,16 +597,19 @@ app.post("/api/orders", (req, res) => {
     .map((item) => {
       const product = db
         .prepare(`
-          SELECT id, name, price
+          SELECT
+            id,
+            name,
+            price
           FROM products
           WHERE id = ?
         `)
         .get(item.productId) as
         | {
-          id: string
-          name: string
-          price: number
-        }
+            id: string
+            name: string
+            price: number
+          }
         | undefined
 
       if (!product) {
@@ -617,75 +642,132 @@ app.post("/api/orders", (req, res) => {
 
   const subtotal = cartItems.reduce(
     (total, item) =>
-      total + item.product.price * item.quantity,
+      total +
+      item.product.price *
+        item.quantity,
     0
   )
 
-  const shipping = subtotal >= 150 ? 0 : 14.9
-  const tax = subtotal * 0.21
-  const total = subtotal + shipping + tax
+  const shippingCost =
+    subtotal >= 150
+      ? 0
+      : 14.9
 
-  const createOrder = db.transaction(() => {
-    const orderResult = db
-      .prepare(`
-        INSERT INTO orders (
-          user_id,
-          status,
+  const tax =
+    subtotal * 0.21
+
+  const total =
+    subtotal +
+    shippingCost +
+    tax
+
+  const createOrder =
+    db.transaction(() => {
+      const orderResult = db
+        .prepare(`
+          INSERT INTO orders (
+            user_id,
+            status,
+            subtotal,
+            shipping,
+            tax,
+            total,
+            first_name,
+            last_name,
+            email,
+            phone,
+            address,
+            city,
+            postcode,
+            country
+          )
+          VALUES (
+            ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?, ?, ?
+          )
+        `)
+        .run(
+          userId,
+          "Processing",
           subtotal,
-          shipping,
+          shippingCost,
           tax,
-          total
+          total,
+          contact.firstName.trim(),
+          contact.lastName.trim(),
+          contact.email.trim(),
+          contact.phone?.trim() || null,
+          shippingDetails.address.trim(),
+          shippingDetails.city.trim(),
+          shippingDetails.postcode.trim(),
+          shippingDetails.country.trim()
         )
-        VALUES (?, ?, ?, ?, ?, ?)
-      `)
-      .run(
-        userId,
-        "Processing",
-        subtotal,
-        shipping,
-        tax,
-        total
+
+      const orderId = Number(
+        orderResult.lastInsertRowid
       )
 
-    const orderId = Number(
-      orderResult.lastInsertRowid
-    )
+      const insertItem =
+        db.prepare(`
+          INSERT INTO order_items (
+            order_id,
+            product_id,
+            product_name,
+            price,
+            quantity
+          )
+          VALUES (?, ?, ?, ?, ?)
+        `)
 
-    const insertItem = db.prepare(`
-      INSERT INTO order_items (
-        order_id,
-        product_id,
-        product_name,
-        price,
-        quantity
-      )
-      VALUES (?, ?, ?, ?, ?)
-    `)
+      for (const item of cartItems) {
+        insertItem.run(
+          orderId,
+          item.product.id,
+          item.product.name,
+          item.product.price,
+          item.quantity
+        )
+      }
 
-    for (const item of cartItems) {
-      insertItem.run(
-        orderId,
-        item.product.id,
-        item.product.name,
-        item.product.price,
-        item.quantity
-      )
-    }
+      req.session.cart = []
 
-    req.session.cart = []
+      return orderId
+    })
 
-    return orderId
-  })
-
-  const orderId = createOrder()
+  const orderId =
+    createOrder()
 
   res.status(201).json({
     message: "Order created",
     order: {
       id: orderId,
       status: "Processing",
+
+      contact: {
+        firstName:
+          contact.firstName.trim(),
+        lastName:
+          contact.lastName.trim(),
+        email:
+          contact.email.trim(),
+        phone:
+          contact.phone?.trim() ||
+          null,
+      },
+
+      shippingAddress: {
+        address:
+          shippingDetails.address.trim(),
+        city:
+          shippingDetails.city.trim(),
+        postcode:
+          shippingDetails.postcode.trim(),
+        country:
+          shippingDetails.country.trim(),
+      },
+
       subtotal,
-      shipping,
+      shipping: shippingCost,
       tax,
       total,
     },
@@ -693,7 +775,8 @@ app.post("/api/orders", (req, res) => {
 })
 
 app.get("/api/orders", (req, res) => {
-  const userId = req.session.userId
+  const userId =
+    req.session.userId
 
   if (!userId) {
     return res.status(401).json({
@@ -710,6 +793,17 @@ app.get("/api/orders", (req, res) => {
         shipping,
         tax,
         total,
+
+        first_name,
+        last_name,
+        email,
+        phone,
+
+        address,
+        city,
+        postcode,
+        country,
+
         created_at
       FROM orders
       WHERE user_id = ?
@@ -718,33 +812,81 @@ app.get("/api/orders", (req, res) => {
     .all(userId) as {
       id: number
       status: string
+
       subtotal: number
       shipping: number
       tax: number
       total: number
+
+      first_name: string | null
+      last_name: string | null
+      email: string | null
+      phone: string | null
+
+      address: string | null
+      city: string | null
+      postcode: string | null
+      country: string | null
+
       created_at: string
     }[]
 
-  const getOrderItems = db.prepare(`
-    SELECT
-      product_id,
-      product_name,
-      price,
-      quantity
-    FROM order_items
-    WHERE order_id = ?
-  `)
+  const getOrderItems =
+    db.prepare(`
+      SELECT
+        product_id,
+        product_name,
+        price,
+        quantity
+      FROM order_items
+      WHERE order_id = ?
+    `)
 
-  const result = orders.map((order) => ({
-    ...order,
+  const result =
+    orders.map((order) => ({
+      id: order.id,
+      status: order.status,
 
-    items: getOrderItems.all(order.id) as {
-      product_id: string
-      product_name: string
-      price: number
-      quantity: number
-    }[],
-  }))
+      subtotal: order.subtotal,
+      shipping: order.shipping,
+      tax: order.tax,
+      total: order.total,
+
+      contact: {
+        firstName:
+          order.first_name,
+        lastName:
+          order.last_name,
+        email:
+          order.email,
+        phone:
+          order.phone,
+      },
+
+      shippingAddress: {
+        address:
+          order.address,
+        city:
+          order.city,
+        postcode:
+          order.postcode,
+        country:
+          order.country,
+      },
+
+      created_at:
+        order.created_at,
+
+      items:
+        getOrderItems.all(
+          order.id
+        ) as {
+          product_id: string
+          product_name: string
+          price: number
+          quantity: number
+        }[],
+    }))
 
   res.json(result)
 })
