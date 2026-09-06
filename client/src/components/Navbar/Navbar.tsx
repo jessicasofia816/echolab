@@ -1,11 +1,24 @@
-import { Link, NavLink } from "react-router";
+import { Link, NavLink, useNavigate } from "react-router";
 import IconButton from "../IconButton/IconButton";
 import { useEffect, useState } from "react";
+import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Navbar() {
 
+    const { cart } = useCart()
+
+    const cartCount = cart.reduce(
+        (total, item) => total + item.quantity,
+        0
+    )
+    const { user, logout } = useAuth()
+
     const [scrolled, setScrolled] = useState(false);
     const [megaOpen, setMegaOpen] = useState(false)
+    const [accountOpen, setAccountOpen] = useState(false)
+
+    const navigate = useNavigate()
 
 
     useEffect(() => {
@@ -226,24 +239,121 @@ export default function Navbar() {
                         <path d="M9 1v2M9 15v2M1 9h2M15 9h2M3.05 3.05l1.41 1.41M13.54 13.54l1.41 1.41M3.05 14.95l1.41-1.41M13.54 4.46l1.41-1.41" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                     </svg>
                 </IconButton>
-                <IconButton ariaLabel="Wishlist">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                        <path d="M9 15s-7-4.5-7-9a4 4 0 0 1 7-2.65A4 4 0 0 1 16 6c0 4.5-7 9-7 9z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                </IconButton>
-                <IconButton ariaLabel="Cart">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                        <path d="M1 1h2.5l1.8 9h9.4l1.5-6H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        <circle cx="7" cy="15" r="1.2" stroke="currentColor" strokeWidth="1.2" />
-                        <circle cx="13" cy="15" r="1.2" stroke="currentColor" strokeWidth="1.2" />
-                    </svg>
-                </IconButton>
-                <IconButton ariaLabel="Account">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                        <circle cx="9" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5" />
-                        <path d="M2.5 17c0-3.5 2.9-6 6.5-6s6.5 2.5 6.5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                </IconButton>
+                <Link to="/account?tab=wishlist" className="no-underline">
+                    <IconButton ariaLabel="Wishlist">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M9 15s-7-4.5-7-9a4 4 0 0 1 7-2.65A4 4 0 0 1 16 6c0 4.5-7 9-7 9z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </IconButton>
+                </Link>
+                <Link to="/cart" className="no-underline">
+                    <IconButton ariaLabel="Cart">
+                        <div className="relative">
+                            <svg
+                                width="18"
+                                height="18"
+                                viewBox="0 0 18 18"
+                                fill="none"
+                            >
+                                <path
+                                    d="M1 1h2.5l1.8 9h9.4l1.5-6H5"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+
+                                <circle
+                                    cx="7"
+                                    cy="15"
+                                    r="1.2"
+                                    stroke="currentColor"
+                                    strokeWidth="1.2"
+                                />
+
+                                <circle
+                                    cx="13"
+                                    cy="15"
+                                    r="1.2"
+                                    stroke="currentColor"
+                                    strokeWidth="1.2"
+                                />
+                            </svg>
+
+                            {cartCount > 0 && (
+                                <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-none text-white">
+                                    {cartCount > 9 ? "9+" : cartCount}
+                                </span>
+                            )}
+                        </div>
+                    </IconButton>
+                </Link>
+                <div className="relative">
+                    {user ? (
+                        <>
+                            <IconButton
+                                ariaLabel="Account"
+                                onClick={() =>
+                                    setAccountOpen((open) => !open)
+                                }
+                            >
+                                <svg
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 18 18"
+                                    fill="none"
+                                >
+                                    {<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                        <circle cx="9" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+                                        <path d="M2.5 17c0-3.5 2.9-6 6.5-6s6.5 2.5 6.5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                    </svg>}
+                                </svg>
+                            </IconButton>
+
+                            {accountOpen && (
+                                <div className="absolute right-0 top-full z-50 mt-2 w-44 rounded-xl border border-border bg-surface-2 p-1.5 shadow-lg">
+                                    <Link
+                                        to="/account"
+                                        onClick={() => setAccountOpen(false)}
+                                        className="block rounded-lg px-3 py-2 text-sm font-medium text-text no-underline transition hover:bg-surface"
+                                    >
+                                        My Account
+                                    </Link>
+
+                                    <div className="my-1 border-t border-border" />
+
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            await logout()
+                                            setAccountOpen(false)
+                                            navigate("/auth")
+                                        }}
+                                        className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-text-muted transition hover:bg-surface hover:text-text"
+                                    >
+                                        Log out
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <Link to="/auth" className="no-underline">
+                            <IconButton ariaLabel="Sign in">
+                                <svg
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 18 18"
+                                    fill="none"
+                                >
+                                    {<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                        <circle cx="9" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+                                        <path d="M2.5 17c0-3.5 2.9-6 6.5-6s6.5 2.5 6.5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                    </svg>}
+                                </svg>
+                            </IconButton>
+                        </Link>
+                    )}
+                </div>
                 <button>                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                     <path d="M2 4h14M2 9h14M2 14h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </svg></button>

@@ -6,6 +6,8 @@ import About from './pages/About/About'
 import ProductListingPage from './pages/ProductListingPage/ProductListingPage'
 import ProductDetailPage from './pages/ProductDetailPage/ProductDetailPage'
 import CartPage from './pages/CartPage/CartPage'
+import AuthPage from './pages/AuthPage/AuthPage'
+import AccountPage from './pages/AccountPage/AccountPage'
 
 
 function App() {
@@ -18,6 +20,8 @@ function App() {
         <Route path="/products" element={<ProductListingPage />} />
         <Route path="/products/:id" element={<ProductDetailPage />} />
         <Route path="/cart" element={<CartPage />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/account" element={<AccountPage />} />
       </Route>
     </Routes>
     </>

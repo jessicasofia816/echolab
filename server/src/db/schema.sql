@@ -46,3 +46,27 @@ ADD COLUMN tags TEXT NOT NULL DEFAULT '[]';
 
 ALTER TABLE products
 ADD COLUMN colors TEXT;
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+ CREATE TABLE IF NOT EXISTS wishlist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    product_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id)
+      REFERENCES users(id)
+      ON DELETE CASCADE,
+
+    FOREIGN KEY (product_id)
+      REFERENCES products(id)
+      ON DELETE CASCADE,
+
+    UNIQUE(user_id, product_id)
+  );

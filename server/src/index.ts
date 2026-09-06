@@ -4,6 +4,21 @@ app.use(express.json());
 import Database from "better-sqlite3";
 import cors from "cors";
 import session from "express-session"
+import {
+  hashPassword,
+  verifyPassword,
+} from "./utils/password.js";
+
+declare module "express-session" {
+  interface SessionData {
+    userId?: number
+
+    cart: {
+      productId: string
+      quantity: number
+    }[]
+  }
+}
 
 app.use(
   cors({
@@ -267,4 +282,276 @@ app.patch("/api/cart/:productId", (req, res) => {
   item.quantity = quantity
 
   res.json(req.session.cart)
+})
+
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { email, password } = req.body
+
+    // 1. Kontrollera att email och password finns
+    if (
+      typeof email !== "string" ||
+      typeof password !== "string"
+    ) {
+      return res.status(400).json({
+        message: "Email and password are required",
+      })
+    }
+
+    // 2. Rensa email
+    const normalizedEmail =
+      email.trim().toLowerCase()
+
+    // 3. Enkel validering
+    if (!normalizedEmail) {
+      return res.status(400).json({
+        message: "Email is required",
+      })
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        message:
+          "Password must be at least 8 characters",
+      })
+    }
+
+    // 4. Kontrollera om email redan finns
+    const existingUser = db
+      .prepare(
+        "SELECT id FROM users WHERE email = ?"
+      )
+      .get(normalizedEmail)
+
+    if (existingUser) {
+      return res.status(409).json({
+        message: "Email already registered",
+      })
+    }
+
+    // 5. Hasha lösenordet
+    const passwordHash =
+      await hashPassword(password)
+
+    // 6. Spara användaren
+    const result = db
+      .prepare(`
+        INSERT INTO users (
+          email,
+          password_hash
+        )
+        VALUES (?, ?)
+      `)
+      .run(
+        normalizedEmail,
+        passwordHash
+      )
+
+    // 7. Skicka tillbaka användaren
+    res.status(201).json({
+      user: {
+        id: result.lastInsertRowid,
+        email: normalizedEmail,
+      },
+    })
+  } catch (error) {
+    console.error(
+      "Failed to register user:",
+      error
+    )
+
+    res.status(500).json({
+      message: "Failed to register user",
+    })
+  }
+})
+
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body
+
+  if (!email || !password) {
+    return res.status(400).json({
+      message: "Email and password are required",
+    })
+  }
+
+  const user = db
+    .prepare(`
+      SELECT id, email, password_hash
+      FROM users
+      WHERE email = ?
+    `)
+    .get(email) as
+    | {
+      id: number
+      email: string
+      password_hash: string
+    }
+    | undefined
+
+  if (!user) {
+    return res.status(401).json({
+      message: "Invalid email or password",
+    })
+  }
+
+  const passwordIsCorrect =
+    await verifyPassword(
+      password,
+      user.password_hash
+    )
+
+  if (!passwordIsCorrect) {
+    return res.status(401).json({
+      message: "Invalid email or password",
+    })
+  }
+
+  req.session.userId = user.id
+
+  res.json({
+    user: {
+      id: user.id,
+      email: user.email,
+    },
+  })
+})
+app.get("/api/auth/me", (req, res) => {
+  const userId = req.session.userId
+
+  if (!userId) {
+    return res.status(401).json({
+      message: "Not authenticated",
+    })
+  }
+
+  const user = db
+    .prepare(`
+      SELECT id, email, created_at
+      FROM users
+      WHERE id = ?
+    `)
+    .get(userId) as
+    | {
+        id: number
+        email: string
+        created_at: string
+      }
+    | undefined
+
+  if (!user) {
+    return res.status(404).json({
+      message: "User not found",
+    })
+  }
+
+  res.json({
+    user,
+  })
+})
+app.post("/api/auth/logout", (req, res) => {
+  req.session.destroy((error) => {
+    if (error) {
+      return res.status(500).json({
+        message: "Could not log out",
+      })
+    }
+
+    res.json({
+      message: "Logged out",
+    })
+  })
+})
+
+app.post("/api/wishlist/:productId", (req, res) => {
+  const userId = req.session.userId
+  const { productId } = req.params
+
+  if (!userId) {
+    return res.status(401).json({
+      message: "Not authenticated",
+    })
+  }
+
+  const product = db
+    .prepare(`
+      SELECT id
+      FROM products
+      WHERE id = ?
+    `)
+    .get(productId)
+
+  if (!product) {
+    return res.status(404).json({
+      message: "Product not found",
+    })
+  }
+
+  db.prepare(`
+    INSERT OR IGNORE INTO wishlist (
+      user_id,
+      product_id
+    )
+    VALUES (?, ?)
+  `).run(userId, productId)
+
+  res.status(201).json({
+    message: "Product added to wishlist",
+    productId,
+  })
+})
+app.get("/api/wishlist", (req, res) => {
+  const userId = req.session.userId
+
+  if (!userId) {
+    return res.status(401).json({
+      message: "Not authenticated",
+    })
+  }
+
+  const products = db
+    .prepare(`
+      SELECT products.*
+      FROM wishlist
+      JOIN products
+        ON wishlist.product_id = products.id
+      WHERE wishlist.user_id = ?
+      ORDER BY wishlist.created_at DESC
+    `)
+    .all(userId)
+
+  res.json(
+    products.map((product) =>
+      formatProduct(product)
+    )
+  )
+})
+app.delete("/api/wishlist/:productId", (req, res) => {
+  const userId = req.session.userId
+  const { productId } = req.params
+
+  if (!userId) {
+    return res.status(401).json({
+      message: "Not authenticated",
+    })
+  }
+
+  const result = db
+    .prepare(`
+      DELETE FROM wishlist
+      WHERE user_id = ?
+      AND product_id = ?
+    `)
+    .run(userId, productId)
+
+  if (result.changes === 0) {
+    return res.status(404).json({
+      message: "Product not found in wishlist",
+    })
+  }
+
+  res.json({
+    message: "Product removed from wishlist",
+    productId,
+  })
 })

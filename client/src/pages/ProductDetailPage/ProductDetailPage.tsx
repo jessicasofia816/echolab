@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react"
-import { Link, useParams } from "react-router"
+import { Link, useNavigate, useParams } from "react-router"
 import type { Product } from "../../types/Product"
 import { useCart } from "../../context/CartContext"
+import { useAuth } from "../../context/AuthContext"
+import { useWishlist } from "../../context/WishlistContext"
+
 
 type ProductTab = "overview" | "specs" | "reviews"
 
@@ -10,13 +13,19 @@ export default function ProductDetailPage() {
     const { id } = useParams()
     const { addToCart } = useCart()
 
+    const navigate = useNavigate()
+    const { user } = useAuth()
+
+    const {
+        addToWishlist,
+        removeFromWishlist,
+        isInWishlist,
+    } = useWishlist()
 
     const [product, setProduct] = useState<Product | null>(null)
     const [activeImage, setActiveImage] = useState(0)
     const [qty, setQty] = useState(1)
     const [activeTab, setActiveTab] = useState<ProductTab>("overview")
-    const [wishlisted, setWishlisted] = useState(false)
-
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
 
@@ -46,7 +55,6 @@ export default function ProductDetailPage() {
                 setActiveImage(0)
                 setQty(1)
                 setActiveTab("overview")
-                setWishlisted(false)
             } catch (error) {
                 console.error("Failed to fetch product:", error)
 
@@ -102,6 +110,7 @@ export default function ProductDetailPage() {
     if (!product) {
         return null
     }
+    const wishlisted = isInWishlist(product.id)
 
     // Huvudbild + extra produktbilder
     const galleryImages = [
@@ -382,9 +391,18 @@ export default function ProductDetailPage() {
                             {/* Wishlist */}
                             <button
                                 type="button"
-                                onClick={() =>
-                                    setWishlisted((current) => !current)
-                                }
+                                onClick={async () => {
+                                    if (!user) {
+                                        navigate("/auth")
+                                        return
+                                    }
+
+                                    if (wishlisted) {
+                                        await removeFromWishlist(product.id)
+                                    } else {
+                                        await addToWishlist(product.id)
+                                    }
+                                }}
                                 aria-label={
                                     wishlisted
                                         ? "Remove from wishlist"
