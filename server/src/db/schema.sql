@@ -100,3 +100,26 @@ CREATE TABLE IF NOT EXISTS order_items (
     FOREIGN KEY (product_id)
       REFERENCES products(id)
 );
+ALTER TABLE orders
+ADD COLUMN first_name TEXT;
+
+ALTER TABLE orders
+ADD COLUMN last_name TEXT;
+
+ALTER TABLE orders
+ADD COLUMN email TEXT;
+
+ALTER TABLE orders
+ADD COLUMN phone TEXT;
+
+ALTER TABLE orders
+ADD COLUMN address TEXT;
+
+ALTER TABLE orders
+ADD COLUMN city TEXT;
+
+ALTER TABLE orders
+ADD COLUMN postcode TEXT;
+
+ALTER TABLE orders
+ADD COLUMN country TEXT;

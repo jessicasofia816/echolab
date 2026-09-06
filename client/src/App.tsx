@@ -9,6 +9,7 @@ import CartPage from './pages/CartPage/CartPage'
 import AuthPage from './pages/AuthPage/AuthPage'
 import AccountPage from './pages/AccountPage/AccountPage'
 import CheckoutPage from './pages/CheckoutPage/CheckoutPage'
+import ContactPage from './pages/Contact/Contact'
 
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/account" element={<AccountPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
       </Route>
     </Routes>
     </>
