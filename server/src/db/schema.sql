@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
- CREATE TABLE IF NOT EXISTS wishlist (
+CREATE TABLE IF NOT EXISTS wishlist (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     product_id TEXT NOT NULL,
@@ -69,4 +69,34 @@ CREATE TABLE IF NOT EXISTS users (
       ON DELETE CASCADE,
 
     UNIQUE(user_id, product_id)
-  );
+  ); 
+
+CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Processing',
+    subtotal REAL NOT NULL,
+    shipping REAL NOT NULL,
+    tax REAL NOT NULL,
+    total REAL NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id)
+      REFERENCES users(id)
+      ON DELETE CASCADE  
+);
+CREATE TABLE IF NOT EXISTS order_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    product_id TEXT NOT NULL,
+    product_name TEXT NOT NULL,
+    price REAL NOT NULL,
+    quantity INTEGER NOT NULL,
+
+    FOREIGN KEY (order_id)
+      REFERENCES orders(id)
+      ON DELETE CASCADE,
+
+    FOREIGN KEY (product_id)
+      REFERENCES products(id)
+);

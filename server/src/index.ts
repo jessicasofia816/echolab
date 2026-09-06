@@ -433,10 +433,10 @@ app.get("/api/auth/me", (req, res) => {
     `)
     .get(userId) as
     | {
-        id: number
-        email: string
-        created_at: string
-      }
+      id: number
+      email: string
+      created_at: string
+    }
     | undefined
 
   if (!user) {
@@ -554,4 +554,197 @@ app.delete("/api/wishlist/:productId", (req, res) => {
     message: "Product removed from wishlist",
     productId,
   })
+})
+
+app.post("/api/orders", (req, res) => {
+  const userId = req.session.userId
+
+  if (!userId) {
+    return res.status(401).json({
+      message: "Not authenticated",
+    })
+  }
+
+  if (!req.session.cart || req.session.cart.length === 0) {
+    return res.status(400).json({
+      message: "Cart is empty",
+    })
+  }
+
+  const cartItems = req.session.cart
+    .map((item) => {
+      const product = db
+        .prepare(`
+          SELECT id, name, price
+          FROM products
+          WHERE id = ?
+        `)
+        .get(item.productId) as
+        | {
+          id: string
+          name: string
+          price: number
+        }
+        | undefined
+
+      if (!product) {
+        return null
+      }
+
+      return {
+        product,
+        quantity: item.quantity,
+      }
+    })
+    .filter(
+      (
+        item
+      ): item is {
+        product: {
+          id: string
+          name: string
+          price: number
+        }
+        quantity: number
+      } => item !== null
+    )
+
+  if (cartItems.length === 0) {
+    return res.status(400).json({
+      message: "No valid products in cart",
+    })
+  }
+
+  const subtotal = cartItems.reduce(
+    (total, item) =>
+      total + item.product.price * item.quantity,
+    0
+  )
+
+  const shipping = subtotal >= 150 ? 0 : 14.9
+  const tax = subtotal * 0.21
+  const total = subtotal + shipping + tax
+
+  const createOrder = db.transaction(() => {
+    const orderResult = db
+      .prepare(`
+        INSERT INTO orders (
+          user_id,
+          status,
+          subtotal,
+          shipping,
+          tax,
+          total
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+      `)
+      .run(
+        userId,
+        "Processing",
+        subtotal,
+        shipping,
+        tax,
+        total
+      )
+
+    const orderId = Number(
+      orderResult.lastInsertRowid
+    )
+
+    const insertItem = db.prepare(`
+      INSERT INTO order_items (
+        order_id,
+        product_id,
+        product_name,
+        price,
+        quantity
+      )
+      VALUES (?, ?, ?, ?, ?)
+    `)
+
+    for (const item of cartItems) {
+      insertItem.run(
+        orderId,
+        item.product.id,
+        item.product.name,
+        item.product.price,
+        item.quantity
+      )
+    }
+
+    req.session.cart = []
+
+    return orderId
+  })
+
+  const orderId = createOrder()
+
+  res.status(201).json({
+    message: "Order created",
+    order: {
+      id: orderId,
+      status: "Processing",
+      subtotal,
+      shipping,
+      tax,
+      total,
+    },
+  })
+})
+
+app.get("/api/orders", (req, res) => {
+  const userId = req.session.userId
+
+  if (!userId) {
+    return res.status(401).json({
+      message: "Not authenticated",
+    })
+  }
+
+  const orders = db
+    .prepare(`
+      SELECT
+        id,
+        status,
+        subtotal,
+        shipping,
+        tax,
+        total,
+        created_at
+      FROM orders
+      WHERE user_id = ?
+      ORDER BY created_at DESC
+    `)
+    .all(userId) as {
+      id: number
+      status: string
+      subtotal: number
+      shipping: number
+      tax: number
+      total: number
+      created_at: string
+    }[]
+
+  const getOrderItems = db.prepare(`
+    SELECT
+      product_id,
+      product_name,
+      price,
+      quantity
+    FROM order_items
+    WHERE order_id = ?
+  `)
+
+  const result = orders.map((order) => ({
+    ...order,
+
+    items: getOrderItems.all(order.id) as {
+      product_id: string
+      product_name: string
+      price: number
+      quantity: number
+    }[],
+  }))
+
+  res.json(result)
 })

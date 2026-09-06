@@ -1,9 +1,11 @@
 import { Link, Navigate, useSearchParams } from "react-router"
-
+import { useEffect, useState } from "react"
 import { useAuth } from "../../context/AuthContext"
 import { useWishlist } from "../../context/WishlistContext"
 import ProductCard from "../../components/ProductCard"
 import { useCart } from "../../context/CartContext"
+import type { OrderItem } from "../../types/Order"
+import type { Order } from "../../types/Order"
 
 type AccountTab =
     | "overview"
@@ -15,6 +17,11 @@ export default function AccountPage() {
     const { user, loading } = useAuth()
     const { wishlist } = useWishlist()
     const { cart } = useCart()
+    const API_URL = import.meta.env.VITE_API_URL
+
+    const [orders, setOrders] = useState<Order[]>([])
+    const [ordersLoading, setOrdersLoading] =
+        useState(true)
 
     const [searchParams, setSearchParams] =
         useSearchParams()
@@ -78,6 +85,45 @@ export default function AccountPage() {
                 label: "Settings",
             },
         ]
+    useEffect(() => {
+        if (!user) {
+            setOrders([])
+            setOrdersLoading(false)
+            return
+        }
+
+        async function getOrders() {
+            try {
+                setOrdersLoading(true)
+
+                const response = await fetch(
+                    `${API_URL}/api/orders`,
+                    {
+                        credentials: "include",
+                    }
+                )
+
+                if (!response.ok) {
+                    throw new Error("Failed to fetch orders")
+                }
+
+                const data = await response.json()
+
+                setOrders(data)
+            } catch (error) {
+                console.error(
+                    "Failed to fetch orders:",
+                    error
+                )
+
+                setOrders([])
+            } finally {
+                setOrdersLoading(false)
+            }
+        }
+
+        getOrders()
+    }, [API_URL, user])
 
     return (
         <main className="min-h-screen bg-background">
@@ -164,20 +210,37 @@ export default function AccountPage() {
 
                         {/* Stats */}
                         <div className="mb-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                            <StatCard
-                                label="Orders"
-                                value="0"
-                            />
+                            <button
+                                type="button"
+                                onClick={() => setTab("orders")}
+                                className="text-left"
+                            >
+                                <StatCard
+                                    label="Orders"
+                                    value={orders.length.toString()}
+                                />
+                            </button>
 
-                            <StatCard
-                                label="Wishlist"
-                                value={wishlist.length.toString()}
-                            />
+                            <button
+                                type="button"
+                                onClick={() => setTab("wishlist")}
+                                className="text-left"
+                            >
+                                <StatCard
+                                    label="Wishlist"
+                                    value={wishlist.length.toString()}
+                                />
+                            </button>
 
-                            <StatCard
-                                label="Cart"
-                                value={cartCount.toString()}
-                            />
+                            <Link
+                                to="/cart"
+                                className="text-left no-underline"
+                            >
+                                <StatCard
+                                    label="Cart"
+                                    value={cartCount.toString()}
+                                />
+                            </Link>
 
                             <StatCard
                                 label="Member Since"
@@ -318,43 +381,115 @@ export default function AccountPage() {
                             Your Orders
                         </h2>
 
-                        <div className="rounded-2xl border border-border bg-surface px-6 py-16 text-center">
-                            <div className="mb-4 text-4xl">
-                                📦
-                            </div>
-
-                            <h3 className="text-lg font-semibold text-text">
-                                No orders yet
-                            </h3>
-
-                            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-text-muted">
-                                Your order history will appear here
-                                once checkout and orders are connected.
+                        {ordersLoading ? (
+                            <p className="text-sm text-text-muted">
+                                Loading orders...
                             </p>
+                        ) : orders.length === 0 ? (
+                            <div className="rounded-2xl border border-border bg-surface px-6 py-16 text-center">
+                                <div className="mb-4 text-4xl">
+                                    📦
+                                </div>
 
-                            <Link
-                                to="/products"
-                                className="
-                  mt-6
-                  inline-flex
-                  rounded-xl
-                  bg-primary
-                  px-5
-                  py-3
-                  text-sm
-                  font-semibold
-                  text-white
-                  no-underline
-                  transition-opacity
-                  hover:opacity-90
-                "
-                            >
-                                Browse Products
-                            </Link>
-                        </div>
+                                <h3 className="text-lg font-semibold text-text">
+                                    No orders yet
+                                </h3>
+
+                                <p className="mt-2 text-sm text-text-muted">
+                                    Your order history will appear here.
+                                </p>
+
+                                <Link
+                                    to="/products"
+                                    className="
+            mt-6
+            inline-flex
+            rounded-xl
+            bg-primary
+            px-5
+            py-3
+            text-sm
+            font-semibold
+            text-white
+            no-underline
+            transition-opacity
+            hover:opacity-90
+          "
+                                >
+                                    Browse Products
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {orders.map((order) => (
+                                    <article
+                                        key={order.id}
+                                        className="rounded-2xl border border-border bg-surface p-5 sm:p-6"
+                                    >
+                                        {/* Header */}
+                                        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
+                                            <div>
+                                                <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                                                    Order
+                                                </p>
+
+                                                <p className="mt-1 font-mono font-bold text-text">
+                                                    #{order.id}
+                                                </p>
+
+                                                <p className="mt-1 text-xs text-text-muted">
+                                                    {new Date(
+                                                        order.created_at
+                                                    ).toLocaleDateString()}
+                                                </p>
+                                            </div>
+
+                                            <div className="text-right">
+                                                <span className="inline-flex rounded-md bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                                                    {order.status}
+                                                </span>
+
+                                                <p className="mt-2 font-mono text-lg font-bold text-text">
+                                                    €{order.total.toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Products */}
+                                        <div className="divide-y divide-border">
+                                            {order.items.map((item) => (
+                                                <div
+                                                    key={item.product_id}
+                                                    className="flex items-center justify-between gap-4 py-4"
+                                                >
+                                                    <div>
+                                                        <Link
+                                                            to={`/products/${item.product_id}`}
+                                                            className="text-sm font-semibold text-text no-underline hover:text-primary"
+                                                        >
+                                                            {item.product_name}
+                                                        </Link>
+
+                                                        <p className="mt-1 text-xs text-text-muted">
+                                                            Qty {item.quantity}
+                                                        </p>
+                                                    </div>
+
+                                                    <span className="shrink-0 font-mono text-sm text-text">
+                                                        €
+                                                        {(
+                                                            item.price * item.quantity
+                                                        ).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </article>
+                                ))}
+                            </div>
+                        )}
                     </section>
                 )}
-
                 {/* WISHLIST */}
                 {activeTab === "wishlist" && (
                     <section>
@@ -482,7 +617,19 @@ function StatCard({
     value: string
 }) {
     return (
-        <div className="rounded-2xl border border-border bg-surface p-5">
+        <div
+            className="
+        h-full
+        rounded-2xl
+        border
+        border-border
+        bg-surface
+        p-5
+        transition-all
+        hover:border-border-strong
+        hover:bg-surface-2
+      "
+        >
             <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-text-muted">
                 {label}
             </p>
