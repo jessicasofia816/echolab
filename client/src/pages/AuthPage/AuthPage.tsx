@@ -132,7 +132,7 @@ export default function AuthPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface px-5 py-20 text-text">
+    <main className="flex min-h-screen items-center justify-center bg-bg px-5 py-20 text-text">
       <div className="w-full max-w-105">
         <div className="mb-9 text-center">
           <Link
@@ -168,14 +168,14 @@ export default function AuthPage() {
           </Link>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-border bg-surface-2">
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface">
           <div className="grid grid-cols-2 border-b border-border">
             <button
               type="button"
               onClick={() => changeTab("login")}
               className={`border-b-2 px-4 py-4.5 text-sm font-bold transition ${
                 tab === "login"
-                  ? "border-primary bg-surface text-text"
+                  ? "border-primary bg-bg text-text"
                   : "border-transparent text-text-muted hover:text-text"
               }`}
             >
@@ -189,7 +189,7 @@ export default function AuthPage() {
               }
               className={`border-b-2 px-4 py-4.5 text-sm font-bold transition ${
                 tab === "register"
-                  ? "border-primary bg-surface text-text"
+                  ? "border-primary bg-bg text-text"
                   : "border-transparent text-text-muted hover:text-text"
               }`}
             >
@@ -398,7 +398,7 @@ function AuthField({
         }
         placeholder={placeholder}
         autoComplete={autoComplete}
-        className="w-full rounded-xl border border-border-strong bg-surface px-3.5 py-3 text-sm text-text outline-none transition placeholder:text-text-muted focus:border-primary"
+        className="w-full rounded-xl border border-border-strong bg-bg px-3.5 py-3 text-sm text-text outline-none transition placeholder:text-text-muted focus:border-primary"
       />
     </div>
   )
