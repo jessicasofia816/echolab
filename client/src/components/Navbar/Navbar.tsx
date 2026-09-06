@@ -3,9 +3,13 @@ import IconButton from "../IconButton/IconButton";
 import { useEffect, useState } from "react";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function Navbar() {
-
+    const {
+        theme,
+        toggleTheme,
+    } = useTheme()
     const { cart } = useCart()
 
     const cartCount = cart.reduce(
@@ -233,11 +237,54 @@ export default function Navbar() {
                         <path d="M11.5 11.5L16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                     </svg>
                 </IconButton>
-                <IconButton ariaLabel="Toggle Theme">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                        <circle cx="9" cy="9" r="4" stroke="currentColor" strokeWidth="1.5" />
-                        <path d="M9 1v2M9 15v2M1 9h2M15 9h2M3.05 3.05l1.41 1.41M13.54 13.54l1.41 1.41M3.05 14.95l1.41-1.41M13.54 4.46l1.41-1.41" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
+                <IconButton
+                    ariaLabel={
+                        theme === "dark"
+                            ? "Switch to light mode"
+                            : "Switch to dark mode"
+                    }
+                    onClick={toggleTheme}
+                >
+                    {theme === "dark" ? (
+                        // Sun
+                        <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 18 18"
+                            fill="none"
+                        >
+                            <circle
+                                cx="9"
+                                cy="9"
+                                r="4"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                            />
+
+                            <path
+                                d="M9 1v2M9 15v2M1 9h2M15 9h2M3.05 3.05l1.41 1.41M13.54 13.54l1.41 1.41M3.05 14.95l1.41-1.41M13.54 4.46l1.41-1.41"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                            />
+                        </svg>
+                    ) : (
+                        // Moon
+                        <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 18 18"
+                            fill="none"
+                        >
+                            <path
+                                d="M15 11.2A6.5 6.5 0 0 1 6.8 3a6.5 6.5 0 1 0 8.2 8.2Z"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    )}
                 </IconButton>
                 <Link to="/account?tab=wishlist" className="no-underline">
                     <IconButton ariaLabel="Wishlist">
