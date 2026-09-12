@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
-import ProductCard from "../../components/ProductCard";
-import type { Product } from "../../types/Product";
-import type { Category } from "../../types/Category";
-import { Link } from "react-router";
+import { useEffect, useState } from "react"
+import { Link, useSearchParams } from "react-router"
+
+import ProductCard from "../../components/ProductCard"
+import type { Product } from "../../types/Product"
+import type { Category } from "../../types/Category"
 
 interface FilterItemProps {
   label: string
@@ -27,9 +28,10 @@ function FilterItem({
         text-left
         text-sm
         transition-colors
-        ${active
-          ? "bg-primary/10 font-semibold text-primary"
-          : "text-text-muted hover:bg-surface-2 hover:text-text"
+        ${
+          active
+            ? "bg-primary/10 font-semibold text-primary"
+            : "text-text-muted hover:bg-surface-2 hover:text-text"
         }
       `}
     >
@@ -39,41 +41,86 @@ function FilterItem({
 }
 
 export default function ProductListingPage() {
-
   const API_URL = import.meta.env.VITE_API_URL
 
   const [products, setProducts] = useState<Product[]>([])
-  const [selectedCategory, setSelectedCategory] = useState("")
   const [categories, setCategories] = useState<Category[]>([])
   const [sortBy, setSortBy] = useState("featured")
   const [inStockOnly, setInStockOnly] = useState(false)
   const [selectedBadge, setSelectedBadge] = useState("")
   const [maxPrice, setMaxPrice] = useState("5000")
 
+  const [searchParams, setSearchParams] =
+    useSearchParams()
+
+  const selectedCategory =
+    searchParams.get("category") || ""
+
+  function changeCategory(categoryId: string) {
+    const params =
+      new URLSearchParams(searchParams)
+
+    if (categoryId) {
+      params.set(
+        "category",
+        categoryId
+      )
+    } else {
+      params.delete("category")
+    }
+
+    setSearchParams(params)
+  }
+
+  function clearProductFilters() {
+    const params =
+      new URLSearchParams(searchParams)
+
+    params.delete("category")
+
+    setSearchParams(params)
+    setSelectedBadge("")
+  }
 
   useEffect(() => {
     async function getProducts() {
       try {
-        const params = new URLSearchParams()
+        const params =
+          new URLSearchParams()
 
         if (selectedCategory) {
-          params.set("category", selectedCategory)
+          params.set(
+            "category",
+            selectedCategory
+          )
         }
 
         if (inStockOnly) {
-          params.set("inStock", "true")
+          params.set(
+            "inStock",
+            "true"
+          )
         }
 
         if (selectedBadge) {
-          params.set("badge", selectedBadge)
+          params.set(
+            "badge",
+            selectedBadge
+          )
         }
 
         if (maxPrice) {
-          params.set("maxPrice", maxPrice)
+          params.set(
+            "maxPrice",
+            maxPrice
+          )
         }
 
         if (sortBy) {
-          params.set("sort", sortBy)
+          params.set(
+            "sort",
+            sortBy
+          )
         }
 
         const response = await fetch(
@@ -81,46 +128,67 @@ export default function ProductListingPage() {
         )
 
         if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`)
+          throw new Error(
+            `HTTP error: ${response.status}`
+          )
         }
 
-        const data = await response.json()
-
-        console.log("Products:", data)
+        const data =
+          await response.json()
 
         setProducts(data)
       } catch (error) {
-        console.error("Failed to fetch products:", error)
+        console.error(
+          "Failed to fetch products:",
+          error
+        )
       }
     }
 
     getProducts()
-  }, [API_URL, selectedCategory, sortBy, inStockOnly, selectedBadge, maxPrice])
-
+  }, [
+    API_URL,
+    selectedCategory,
+    sortBy,
+    inStockOnly,
+    selectedBadge,
+    maxPrice,
+  ])
 
   useEffect(() => {
     async function getCategories() {
       try {
-        const response = await fetch(`${API_URL}/api/categories`)
+        const response = await fetch(
+          `${API_URL}/api/categories`
+        )
 
         if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`)
+          throw new Error(
+            `HTTP error: ${response.status}`
+          )
         }
 
-        const data = await response.json()
+        const data =
+          await response.json()
 
         setCategories(data)
       } catch (error) {
-        console.error("Failed to fetch categories:", error)
+        console.error(
+          "Failed to fetch categories:",
+          error
+        )
       }
     }
 
     getCategories()
   }, [API_URL])
 
-  const activeCategoryData = categories.find(
-    (category) => category.id === selectedCategory
-  )
+  const activeCategoryData =
+    categories.find(
+      (category) =>
+        category.id ===
+        selectedCategory
+    )
 
   return (
     <div className="min-h-screen bg-bg">
@@ -137,14 +205,14 @@ export default function ProductListingPage() {
 
             <span>/</span>
 
-            {(selectedCategory || selectedBadge) && (
+            {(selectedCategory ||
+              selectedBadge) && (
               <>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedCategory("")
-                    setSelectedBadge("")
-                  }}
+                  onClick={
+                    clearProductFilters
+                  }
                   className="text-text-muted hover:text-text"
                 >
                   All Products
@@ -156,41 +224,51 @@ export default function ProductListingPage() {
 
             <span className="text-text">
               {activeCategoryData?.name ||
-                (selectedBadge ? `${selectedBadge} Products` : "All Products")}
+                (selectedBadge
+                  ? `${selectedBadge} Products`
+                  : "All Products")}
             </span>
           </nav>
 
           <h1
             className="
-        mb-2
-        font-serif
-        text-[clamp(28px,4vw,48px)]
-        font-normal
-        tracking-[-0.02em]
-        text-text
-      "
+              mb-2
+              font-serif
+              text-[clamp(28px,4vw,48px)]
+              font-normal
+              tracking-[-0.02em]
+              text-text
+            "
           >
             {activeCategoryData?.name ||
-              (selectedBadge ? `${selectedBadge} Products` : "All Products")}
+              (selectedBadge
+                ? `${selectedBadge} Products`
+                : "All Products")}
           </h1>
 
           {activeCategoryData && (
             <p className="text-text-muted">
-              {activeCategoryData.description}
+              {
+                activeCategoryData.description
+              }
             </p>
           )}
 
           <p className="mt-1 text-[14px] text-text-muted">
-            {products.length} product{products.length !== 1 ? "s" : ""}
+            {products.length} product
+            {products.length !== 1
+              ? "s"
+              : ""}
           </p>
-
         </div>
       </div>
-      <div className="container-wide pt-10 pb-20">
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-[220px_1fr] items-start">
+
+      <div className="container-wide pb-20 pt-10">
+        <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-[220px_1fr]">
           {/* Sidebar filter */}
           <aside>
             <div className="mb-8">
+              {/* Categories */}
               <div className="mb-8">
                 <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
                   Categories
@@ -199,20 +277,40 @@ export default function ProductListingPage() {
                 <div className="flex flex-col gap-0.5">
                   <FilterItem
                     label="All Products"
-                    active={selectedCategory === ""}
-                    onClick={() => setSelectedCategory("")}
+                    active={
+                      selectedCategory ===
+                      ""
+                    }
+                    onClick={() =>
+                      changeCategory("")
+                    }
                   />
 
-                  {categories.map((category) => (
-                    <FilterItem
-                      key={category.id}
-                      label={category.name}
-                      active={selectedCategory === category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                    />
-                  ))}
+                  {categories.map(
+                    (category) => (
+                      <FilterItem
+                        key={
+                          category.id
+                        }
+                        label={
+                          category.name
+                        }
+                        active={
+                          selectedCategory ===
+                          category.id
+                        }
+                        onClick={() =>
+                          changeCategory(
+                            category.id
+                          )
+                        }
+                      />
+                    )
+                  )}
                 </div>
               </div>
+
+              {/* Special */}
               <div className="mb-8">
                 <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
                   Special
@@ -221,41 +319,85 @@ export default function ProductListingPage() {
                 <div className="flex flex-col gap-0.5">
                   <FilterItem
                     label="All"
-                    active={selectedBadge === ""}
-                    onClick={() => setSelectedBadge("")}
+                    active={
+                      selectedBadge ===
+                      ""
+                    }
+                    onClick={() =>
+                      setSelectedBadge(
+                        ""
+                      )
+                    }
                   />
 
                   <FilterItem
                     label="New"
-                    active={selectedBadge === "New"}
-                    onClick={() => setSelectedBadge("New")}
+                    active={
+                      selectedBadge ===
+                      "New"
+                    }
+                    onClick={() =>
+                      setSelectedBadge(
+                        "New"
+                      )
+                    }
                   />
 
                   <FilterItem
                     label="Sale"
-                    active={selectedBadge === "Sale"}
-                    onClick={() => setSelectedBadge("Sale")}
+                    active={
+                      selectedBadge ===
+                      "Sale"
+                    }
+                    onClick={() =>
+                      setSelectedBadge(
+                        "Sale"
+                      )
+                    }
                   />
 
                   <FilterItem
                     label="Best Seller"
-                    active={selectedBadge === "Best Seller"}
-                    onClick={() => setSelectedBadge("Best Seller")}
+                    active={
+                      selectedBadge ===
+                      "Best Seller"
+                    }
+                    onClick={() =>
+                      setSelectedBadge(
+                        "Best Seller"
+                      )
+                    }
                   />
 
                   <FilterItem
                     label="Limited"
-                    active={selectedBadge === "Limited"}
-                    onClick={() => setSelectedBadge("Limited")}
+                    active={
+                      selectedBadge ===
+                      "Limited"
+                    }
+                    onClick={() =>
+                      setSelectedBadge(
+                        "Limited"
+                      )
+                    }
                   />
 
                   <FilterItem
                     label="Staff Pick"
-                    active={selectedBadge === "Staff Pick"}
-                    onClick={() => setSelectedBadge("Staff Pick")}
+                    active={
+                      selectedBadge ===
+                      "Staff Pick"
+                    }
+                    onClick={() =>
+                      setSelectedBadge(
+                        "Staff Pick"
+                      )
+                    }
                   />
                 </div>
               </div>
+
+              {/* Max price */}
               <div className="mb-8">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
@@ -273,60 +415,105 @@ export default function ProductListingPage() {
                   max="10000"
                   step="100"
                   value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
+                  onChange={(e) =>
+                    setMaxPrice(
+                      e.target.value
+                    )
+                  }
                   className="w-full cursor-pointer accent-primary"
                 />
               </div>
+
+              {/* Availability */}
               <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
-                AVAILABILITY
+                Availability
               </p>
+
               <label className="flex items-center gap-2 text-sm text-text-muted">
                 <input
                   type="checkbox"
-                  checked={inStockOnly}
-                  onChange={(e) => setInStockOnly(e.target.checked)}
+                  checked={
+                    inStockOnly
+                  }
+                  onChange={(e) =>
+                    setInStockOnly(
+                      e.target.checked
+                    )
+                  }
                 />
 
                 In Stock Only
               </label>
             </div>
           </aside>
+
+          {/* Products */}
           <div className="flex flex-col gap-5">
-            <div className="flex items-center justify-between gap-3 mb-6 pb-5 border-b border-border flex-wrap">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-5">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-text-muted">
-                  Showing <strong className="text-text">{products.length}</strong> results
+                  Showing{" "}
+                  <strong className="text-text">
+                    {products.length}
+                  </strong>{" "}
+                  results
                 </p>
               </div>
+
               <div className="flex items-center gap-2">
-                <span className="text-sm text-text-muted">Sort:</span>
+                <span className="text-sm text-text-muted">
+                  Sort:
+                </span>
+
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
+                  onChange={(e) =>
+                    setSortBy(
+                      e.target.value
+                    )
+                  }
                   className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text"
                 >
-                  <option value="featured">Featured</option>
-                  <option value="newest">Newest</option>
-                  <option value="price-asc">Price: Low to High</option>
-                  <option value="price-desc">Price: High to Low</option>
-                  <option value="rating">Top Rated</option>
+                  <option value="featured">
+                    Featured
+                  </option>
+
+                  <option value="newest">
+                    Newest
+                  </option>
+
+                  <option value="price-asc">
+                    Price: Low to High
+                  </option>
+
+                  <option value="price-desc">
+                    Price: High to Low
+                  </option>
+
+                  <option value="rating">
+                    Top Rated
+                  </option>
                 </select>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                />
-              ))}
+              {products.map(
+                (product) => (
+                  <ProductCard
+                    key={
+                      product.id
+                    }
+                    product={
+                      product
+                    }
+                  />
+                )
+              )}
             </div>
           </div>
         </div>
       </div>
-
     </div>
-
-  );
+  )
 }

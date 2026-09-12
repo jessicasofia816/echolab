@@ -1,13 +1,19 @@
 import express from "express";
 const app = express();
+app.set("trust proxy", 1)
 app.use(express.json());
-import Database from "better-sqlite3";
+import { db } from "./db/db.js";
 import cors from "cors";
 import session from "express-session"
+import connectPgSimple from "connect-pg-simple"
 import {
   hashPassword,
   verifyPassword,
 } from "./utils/password.js";
+import "dotenv/config"
+import { createTables } from "./db/schema.js"
+import { seedDatabase } from "./db/seed.js"
+
 
 declare module "express-session" {
   interface SessionData {
@@ -20,184 +26,201 @@ declare module "express-session" {
   }
 }
 
+const PgSession = connectPgSimple(session)
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     credentials: true,
   })
 );
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "dev-secret",
+    store: new PgSession({
+      pool: db,
+      tableName: "user_sessions",
+      createTableIfMissing: true,
+    }),
+
+    secret:
+      process.env.SESSION_SECRET ||
+      "dev-secret",
+
     resave: false,
     saveUninitialized: false,
+
     cookie: {
       httpOnly: true,
       secure: false,
       sameSite: "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 7,
+      maxAge:
+        1000 * 60 * 60 * 24 * 7,
     },
-
   })
-);
+)
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
 const port = Number(process.env.PORT) || 3000;
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
 
-// --- DB ---
-const db = new Database("./src/db/database.db", { verbose: console.log });
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
+async function startServer() {
+  try {
+    await db.query("SELECT NOW()")
+    console.log("PostgreSQL connected")
 
-function formatProduct(product: any) {
-  return {
-    ...product,
+    await createTables()
+    await seedDatabase()
 
-    images: product.images
-      ? JSON.parse(product.images)
-      : [],
-
-    features: product.features
-      ? JSON.parse(product.features)
-      : [],
-
-    specs: product.specs
-      ? JSON.parse(product.specs)
-      : {},
-
-    tags: product.tags
-      ? JSON.parse(product.tags)
-      : [],
-
-    colors: product.colors
-      ? JSON.parse(product.colors)
-      : null,
+    app.listen(port, () => {
+      console.log(`Server running on http://localhost:${port}`)
+    })
+  } catch (error) {
+    console.error("Failed to start server:", error)
+    process.exit(1)
   }
 }
 
+startServer()
+
 // --- hämta produkter ---
-app.get("/api/products", (req, res) => {
-  const category = req.query.category
-  const sort = req.query.sort
-  const inStock = req.query.inStock
-  const badge = req.query.badge
-  const maxPrice = req.query.maxPrice
+app.get("/api/products", async (req, res) => {
+  try {
+    const category = req.query.category
+    const sort = req.query.sort
+    const inStock = req.query.inStock
+    const badge = req.query.badge
+    const maxPrice = req.query.maxPrice
+    const search = req.query.search
 
-  let sql = "SELECT * FROM products"
+    let sql = "SELECT * FROM products"
 
-  const conditions: string[] = []
-  const params: unknown[] = []
+    const conditions: string[] = []
+    const params: unknown[] = []
 
-  // Category
-  if (category) {
-    conditions.push("category_id = ?")
-    params.push(String(category))
+    if (category) {
+      params.push(String(category))
+      conditions.push(`category_id = $${params.length}`)
+    }
+
+    if (inStock === "true") {
+      conditions.push("in_stock = 1")
+    }
+
+    if (badge) {
+      params.push(String(badge))
+      conditions.push(`badge = $${params.length}`)
+    }
+
+    if (maxPrice) {
+      params.push(Number(maxPrice))
+      conditions.push(`price <= $${params.length}`)
+    }
+
+    if (search) {
+      const searchTerm = `%${String(search)}%`
+
+      params.push(searchTerm)
+      const nameIndex = params.length
+
+      params.push(searchTerm)
+      const taglineIndex = params.length
+
+      params.push(searchTerm)
+      const descriptionIndex = params.length
+
+      conditions.push(`
+        (
+          name ILIKE $${nameIndex}
+          OR tagline ILIKE $${taglineIndex}
+          OR description ILIKE $${descriptionIndex}
+        )
+      `)
+    }
+
+    if (conditions.length > 0) {
+      sql += ` WHERE ${conditions.join(" AND ")}`
+    }
+
+    switch (sort) {
+      case "price-asc":
+        sql += " ORDER BY price ASC"
+        break
+
+      case "price-desc":
+        sql += " ORDER BY price DESC"
+        break
+
+      case "rating":
+        sql += " ORDER BY rating DESC"
+        break
+
+      case "newest":
+        sql += " ORDER BY is_new DESC"
+        break
+
+      case "featured":
+      default:
+        sql += " ORDER BY featured DESC"
+        break
+    }
+
+    const result = await db.query(sql, params)
+
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Failed to fetch products:", error)
+
+    res.status(500).json({
+      message: "Failed to fetch products",
+    })
   }
-
-  // In stock
-  if (inStock === "true") {
-    conditions.push("in_stock = 1")
-  }
-
-  // Badge
-  if (badge) {
-    conditions.push("badge = ?")
-    params.push(String(badge))
-  }
-
-  // Max Price
-  if (maxPrice) {
-    conditions.push("price <= ?")
-    params.push(Number(maxPrice))
-  }
-
-  if (conditions.length > 0) {
-    sql += ` WHERE ${conditions.join(" AND ")}`
-  }
-
-  // Sorting
-  switch (sort) {
-    case "price-asc":
-      sql += " ORDER BY price ASC"
-      break
-
-    case "price-desc":
-      sql += " ORDER BY price DESC"
-      break
-
-    case "rating":
-      sql += " ORDER BY rating DESC"
-      break
-
-    case "newest":
-      sql += " ORDER BY is_new DESC"
-      break
-
-    case "featured":
-    default:
-      sql += " ORDER BY featured DESC"
-      break
-  }
-
-  const products = db
-    .prepare(sql)
-    .all(...params)
-
-  res.json(products.map(formatProduct))
 })
 
 // --- hämta kategorier ---
-app.get("/api/categories", (_req, res) => {
-  const categories = db.prepare("SELECT * FROM categories").all();
-  res.json(categories);
-});
+app.get("/api/categories", async (_req, res) => {
+  try {
+    const result = await db.query(
+      "SELECT * FROM categories"
+    )
+
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Failed to fetch categories:", error)
+
+    res.status(500).json({
+      message: "Failed to fetch categories",
+    })
+  }
+})
 
 // --- hämta produkt med id ---
-app.get("/api/products/:id", (req, res) => {
-  const productId = req.params.id;
-  const product = db
-    .prepare("SELECT * FROM products WHERE id = ?")
-    .get(productId);
+app.get("/api/products/:id", async (req, res) => {
+  try {
+    const productId = req.params.id
 
-  if (!product) {
-    res.status(404).json({ error: "Product not found" });
-    return;
-  }
+    const result = await db.query(
+      "SELECT * FROM products WHERE id = $1",
+      [productId]
+    )
 
-  res.json(formatProduct(product));
-});
+    const product = result.rows[0]
 
-// --- hämta varukorg ---
-app.get("/api/cart", (req, res) => {
-  if (!req.session.cart) {
-    req.session.cart = []
-  }
+    if (!product) {
+      return res.status(404).json({
+        error: "Product not found",
+      })
+    }
 
-  const cartItems = req.session.cart
-    .map((item) => {
-      const product = db
-        .prepare("SELECT * FROM products WHERE id = ?")
-        .get(item.productId)
+    res.json(product)
+  } catch (error) {
+    console.error("Failed to fetch product:", error)
 
-      if (!product) {
-        return null
-      }
-
-      return {
-        productId: item.productId,
-        quantity: item.quantity,
-        product: formatProduct(product),
-      }
+    res.status(500).json({
+      message: "Failed to fetch product",
     })
-    .filter((item) => item !== null)
-
-  res.json(cartItems)
+  }
 })
 
 // --- lägg till i varukorg ---
@@ -207,6 +230,15 @@ app.post("/api/cart", (req, res) => {
   if (!productId) {
     return res.status(400).json({
       message: "productId is required",
+    })
+  }
+
+  if (
+    typeof quantity !== "number" ||
+    quantity < 1
+  ) {
+    return res.status(400).json({
+      message: "quantity must be at least 1",
     })
   }
 
@@ -228,6 +260,46 @@ app.post("/api/cart", (req, res) => {
   }
 
   res.status(201).json(req.session.cart)
+})
+
+// --- hämta varukorg ---
+app.get("/api/cart", async (req, res) => {
+  try {
+    if (!req.session.cart) {
+      req.session.cart = []
+    }
+
+    const cartItems = await Promise.all(
+      req.session.cart.map(async (item) => {
+        const result = await db.query(
+          "SELECT * FROM products WHERE id = $1",
+          [item.productId]
+        )
+
+        const product = result.rows[0]
+
+        if (!product) {
+          return null
+        }
+
+        return {
+          productId: item.productId,
+          quantity: item.quantity,
+          product,
+        }
+      })
+    )
+
+    res.json(
+      cartItems.filter((item) => item !== null)
+    )
+  } catch (error) {
+    console.error("Failed to fetch cart:", error)
+
+    res.status(500).json({
+      message: "Failed to fetch cart",
+    })
+  }
 })
 
 // --- ta bort från varukorg ---
@@ -288,7 +360,6 @@ app.post("/api/auth/register", async (req, res) => {
   try {
     const { email, password } = req.body
 
-    // 1. Kontrollera att email och password finns
     if (
       typeof email !== "string" ||
       typeof password !== "string"
@@ -298,11 +369,8 @@ app.post("/api/auth/register", async (req, res) => {
       })
     }
 
-    // 2. Rensa email
-    const normalizedEmail =
-      email.trim().toLowerCase()
+    const normalizedEmail = email.trim().toLowerCase()
 
-    // 3. Enkel validering
     if (!normalizedEmail) {
       return res.status(400).json({
         message: "Email is required",
@@ -311,54 +379,42 @@ app.post("/api/auth/register", async (req, res) => {
 
     if (password.length < 8) {
       return res.status(400).json({
-        message:
-          "Password must be at least 8 characters",
+        message: "Password must be at least 8 characters",
       })
     }
 
-    // 4. Kontrollera om email redan finns
-    const existingUser = db
-      .prepare(
-        "SELECT id FROM users WHERE email = ?"
-      )
-      .get(normalizedEmail)
+    const existingUserResult = await db.query(
+      "SELECT id FROM users WHERE email = $1",
+      [normalizedEmail]
+    )
 
-    if (existingUser) {
+    if (existingUserResult.rows[0]) {
       return res.status(409).json({
         message: "Email already registered",
       })
     }
 
-    // 5. Hasha lösenordet
-    const passwordHash =
-      await hashPassword(password)
+    const passwordHash = await hashPassword(password)
 
-    // 6. Spara användaren
-    const result = db
-      .prepare(`
+    const result = await db.query(
+      `
         INSERT INTO users (
           email,
           password_hash
         )
-        VALUES (?, ?)
-      `)
-      .run(
-        normalizedEmail,
-        passwordHash
-      )
+        VALUES ($1, $2)
+        RETURNING id, email
+      `,
+      [normalizedEmail, passwordHash]
+    )
 
-    // 7. Skicka tillbaka användaren
+    const user = result.rows[0]
+
     res.status(201).json({
-      user: {
-        id: result.lastInsertRowid,
-        email: normalizedEmail,
-      },
+      user,
     })
   } catch (error) {
-    console.error(
-      "Failed to register user:",
-      error
-    )
+    console.error("Failed to register user:", error)
 
     res.status(500).json({
       message: "Failed to register user",
@@ -367,196 +423,237 @@ app.post("/api/auth/register", async (req, res) => {
 })
 
 app.post("/api/auth/login", async (req, res) => {
-  const { email, password } = req.body
+  try {
+    const { email, password } = req.body
 
-  if (!email || !password) {
-    return res.status(400).json({
-      message: "Email and password are required",
-    })
-  }
-
-  const user = db
-    .prepare(`
-      SELECT id, email, password_hash
-      FROM users
-      WHERE email = ?
-    `)
-    .get(email) as
-    | {
-      id: number
-      email: string
-      password_hash: string
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required",
+      })
     }
-    | undefined
 
-  if (!user) {
-    return res.status(401).json({
-      message: "Invalid email or password",
-    })
-  }
+    const normalizedEmail = String(email)
+      .trim()
+      .toLowerCase()
 
-  const passwordIsCorrect =
-    await verifyPassword(
-      password,
-      user.password_hash
+    const result = await db.query(
+      `
+        SELECT id, email, password_hash
+        FROM users
+        WHERE email = $1
+      `,
+      [normalizedEmail]
     )
 
-  if (!passwordIsCorrect) {
-    return res.status(401).json({
-      message: "Invalid email or password",
-    })
-  }
+    const user = result.rows[0] as
+      | {
+          id: number
+          email: string
+          password_hash: string
+        }
+      | undefined
 
-  req.session.userId = user.id
-
-  res.json({
-    user: {
-      id: user.id,
-      email: user.email,
-    },
-  })
-})
-app.get("/api/auth/me", (req, res) => {
-  const userId = req.session.userId
-
-  if (!userId) {
-    return res.status(401).json({
-      message: "Not authenticated",
-    })
-  }
-
-  const user = db
-    .prepare(`
-      SELECT id, email, created_at
-      FROM users
-      WHERE id = ?
-    `)
-    .get(userId) as
-    | {
-      id: number
-      email: string
-      created_at: string
+    if (!user) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      })
     }
-    | undefined
 
-  if (!user) {
-    return res.status(404).json({
-      message: "User not found",
+    const passwordIsCorrect =
+      await verifyPassword(
+        password,
+        user.password_hash
+      )
+
+    if (!passwordIsCorrect) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      })
+    }
+
+    req.session.userId = user.id
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+      },
+    })
+  } catch (error) {
+    console.error("Failed to log in:", error)
+
+    res.status(500).json({
+      message: "Failed to log in",
     })
   }
-
-  res.json({
-    user,
-  })
 })
-app.post("/api/auth/logout", (req, res) => {
-  req.session.destroy((error) => {
-    if (error) {
-      return res.status(500).json({
-        message: "Could not log out",
+
+app.get("/api/auth/me", async (req, res) => {
+  try {
+    const userId = req.session.userId
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Not authenticated",
+      })
+    }
+
+    const result = await db.query(
+      `
+        SELECT id, email, created_at
+        FROM users
+        WHERE id = $1
+      `,
+      [userId]
+    )
+
+    const user = result.rows[0]
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
       })
     }
 
     res.json({
-      message: "Logged out",
+      user,
     })
-  })
+  } catch (error) {
+    console.error("Failed to fetch user:", error)
+
+    res.status(500).json({
+      message: "Failed to fetch user",
+    })
+  }
 })
 
-app.post("/api/wishlist/:productId", (req, res) => {
-  const userId = req.session.userId
-  const { productId } = req.params
+app.post("/api/wishlist/:productId", async (req, res) => {
+  try {
+    const userId = req.session.userId
+    const { productId } = req.params
 
-  if (!userId) {
-    return res.status(401).json({
-      message: "Not authenticated",
-    })
-  }
+    if (!userId) {
+      return res.status(401).json({
+        message: "Not authenticated",
+      })
+    }
 
-  const product = db
-    .prepare(`
-      SELECT id
-      FROM products
-      WHERE id = ?
-    `)
-    .get(productId)
-
-  if (!product) {
-    return res.status(404).json({
-      message: "Product not found",
-    })
-  }
-
-  db.prepare(`
-    INSERT OR IGNORE INTO wishlist (
-      user_id,
-      product_id
+    const productResult = await db.query(
+      `
+        SELECT id
+        FROM products
+        WHERE id = $1
+      `,
+      [productId]
     )
-    VALUES (?, ?)
-  `).run(userId, productId)
 
-  res.status(201).json({
-    message: "Product added to wishlist",
-    productId,
-  })
-})
-app.get("/api/wishlist", (req, res) => {
-  const userId = req.session.userId
+    if (!productResult.rows[0]) {
+      return res.status(404).json({
+        message: "Product not found",
+      })
+    }
 
-  if (!userId) {
-    return res.status(401).json({
-      message: "Not authenticated",
-    })
-  }
-
-  const products = db
-    .prepare(`
-      SELECT products.*
-      FROM wishlist
-      JOIN products
-        ON wishlist.product_id = products.id
-      WHERE wishlist.user_id = ?
-      ORDER BY wishlist.created_at DESC
-    `)
-    .all(userId)
-
-  res.json(
-    products.map((product) =>
-      formatProduct(product)
+    await db.query(
+      `
+        INSERT INTO wishlist (
+          user_id,
+          product_id
+        )
+        VALUES ($1, $2)
+        ON CONFLICT (user_id, product_id)
+        DO NOTHING
+      `,
+      [userId, productId]
     )
-  )
-})
-app.delete("/api/wishlist/:productId", (req, res) => {
-  const userId = req.session.userId
-  const { productId } = req.params
 
-  if (!userId) {
-    return res.status(401).json({
-      message: "Not authenticated",
+    res.status(201).json({
+      message: "Product added to wishlist",
+      productId,
+    })
+  } catch (error) {
+    console.error("Failed to add to wishlist:", error)
+
+    res.status(500).json({
+      message: "Failed to add to wishlist",
     })
   }
-
-  const result = db
-    .prepare(`
-      DELETE FROM wishlist
-      WHERE user_id = ?
-      AND product_id = ?
-    `)
-    .run(userId, productId)
-
-  if (result.changes === 0) {
-    return res.status(404).json({
-      message: "Product not found in wishlist",
-    })
-  }
-
-  res.json({
-    message: "Product removed from wishlist",
-    productId,
-  })
 })
 
-app.post("/api/orders", (req, res) => {
+app.get("/api/wishlist", async (req, res) => {
+  try {
+    const userId = req.session.userId
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Not authenticated",
+      })
+    }
+
+    const result = await db.query(
+      `
+        SELECT products.*
+        FROM wishlist
+        JOIN products
+          ON wishlist.product_id = products.id
+        WHERE wishlist.user_id = $1
+        ORDER BY wishlist.created_at DESC
+      `,
+      [userId]
+    )
+
+    res.json(result.rows)
+  } catch (error) {
+    console.error("Failed to fetch wishlist:", error)
+
+    res.status(500).json({
+      message: "Failed to fetch wishlist",
+    })
+  }
+})
+
+app.delete("/api/wishlist/:productId", async (req, res) => {
+  try {
+    const userId = req.session.userId
+    const { productId } = req.params
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Not authenticated",
+      })
+    }
+
+    const result = await db.query(
+      `
+        DELETE FROM wishlist
+        WHERE user_id = $1
+        AND product_id = $2
+      `,
+      [userId, productId]
+    )
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        message: "Product not found in wishlist",
+      })
+    }
+
+    res.json({
+      message: "Product removed from wishlist",
+      productId,
+    })
+  } catch (error) {
+    console.error(
+      "Failed to remove from wishlist:",
+      error
+    )
+
+    res.status(500).json({
+      message: "Failed to remove from wishlist",
+    })
+  }
+})
+
+app.post("/api/orders", async (req, res) => {
   const userId = req.session.userId
 
   if (!userId) {
@@ -593,35 +690,43 @@ app.post("/api/orders", (req, res) => {
     })
   }
 
-  const cartItems = req.session.cart
-    .map((item) => {
-      const product = db
-        .prepare(`
-          SELECT
-            id,
-            name,
-            price
-          FROM products
-          WHERE id = ?
-        `)
-        .get(item.productId) as
-        | {
-            id: string
-            name: string
-            price: number
-          }
-        | undefined
+  const client = await db.connect()
 
-      if (!product) {
-        return null
-      }
+  try {
+    const cartItems = await Promise.all(
+      req.session.cart.map(async (item) => {
+        const result = await client.query(
+          `
+            SELECT
+              id,
+              name,
+              price
+            FROM products
+            WHERE id = $1
+          `,
+          [item.productId]
+        )
 
-      return {
-        product,
-        quantity: item.quantity,
-      }
-    })
-    .filter(
+        const product = result.rows[0] as
+          | {
+              id: string
+              name: string
+              price: number
+            }
+          | undefined
+
+        if (!product) {
+          return null
+        }
+
+        return {
+          product,
+          quantity: item.quantity,
+        }
+      })
+    )
+
+    const validCartItems = cartItems.filter(
       (
         item
       ): item is {
@@ -634,81 +739,78 @@ app.post("/api/orders", (req, res) => {
       } => item !== null
     )
 
-  if (cartItems.length === 0) {
-    return res.status(400).json({
-      message: "No valid products in cart",
-    })
-  }
+    if (validCartItems.length === 0) {
+      return res.status(400).json({
+        message: "No valid products in cart",
+      })
+    }
 
-  const subtotal = cartItems.reduce(
-    (total, item) =>
-      total +
-      item.product.price *
-        item.quantity,
-    0
-  )
+    const subtotal = validCartItems.reduce(
+      (total, item) =>
+        total +
+        item.product.price * item.quantity,
+      0
+    )
 
-  const shippingCost =
-    subtotal >= 150
-      ? 0
-      : 14.9
+    const shippingCost =
+      subtotal >= 150 ? 0 : 14.9
 
-  const tax =
-    subtotal * 0.21
+    const tax = subtotal * 0.21
 
-  const total =
-    subtotal +
-    shippingCost +
-    tax
+    const total =
+      subtotal +
+      shippingCost +
+      tax
 
-  const createOrder =
-    db.transaction(() => {
-      const orderResult = db
-        .prepare(`
-          INSERT INTO orders (
-            user_id,
-            status,
-            subtotal,
-            shipping,
-            tax,
-            total,
-            first_name,
-            last_name,
-            email,
-            phone,
-            address,
-            city,
-            postcode,
-            country
-          )
-          VALUES (
-            ?, ?, ?, ?, ?, ?,
-            ?, ?, ?, ?, ?, ?, ?, ?
-          )
-        `)
-        .run(
-          userId,
-          "Processing",
+    await client.query("BEGIN")
+
+    const orderResult = await client.query(
+      `
+        INSERT INTO orders (
+          user_id,
+          status,
           subtotal,
-          shippingCost,
+          shipping,
           tax,
           total,
-          contact.firstName.trim(),
-          contact.lastName.trim(),
-          contact.email.trim(),
-          contact.phone?.trim() || null,
-          shippingDetails.address.trim(),
-          shippingDetails.city.trim(),
-          shippingDetails.postcode.trim(),
-          shippingDetails.country.trim()
+          first_name,
+          last_name,
+          email,
+          phone,
+          address,
+          city,
+          postcode,
+          country
         )
+        VALUES (
+          $1, $2, $3, $4, $5, $6,
+          $7, $8, $9, $10, $11, $12, $13, $14
+        )
+        RETURNING id
+      `,
+      [
+        userId,
+        "Processing",
+        subtotal,
+        shippingCost,
+        tax,
+        total,
+        contact.firstName.trim(),
+        contact.lastName.trim(),
+        contact.email.trim(),
+        contact.phone?.trim() || null,
+        shippingDetails.address.trim(),
+        shippingDetails.city.trim(),
+        shippingDetails.postcode.trim(),
+        shippingDetails.country.trim(),
+      ]
+    )
 
-      const orderId = Number(
-        orderResult.lastInsertRowid
-      )
+    const orderId = orderResult.rows[0].id
 
-      const insertItem =
-        db.prepare(`
+    for (const item of validCartItems) {
+      await client.query(
+        `
           INSERT INTO order_items (
             order_id,
             product_id,
@@ -716,100 +818,108 @@ app.post("/api/orders", (req, res) => {
             price,
             quantity
           )
-          VALUES (?, ?, ?, ?, ?)
-        `)
-
-      for (const item of cartItems) {
-        insertItem.run(
+          VALUES ($1, $2, $3, $4, $5)
+        `,
+        [
           orderId,
           item.product.id,
           item.product.name,
           item.product.price,
-          item.quantity
-        )
-      }
+          item.quantity,
+        ]
+      )
+    }
 
-      req.session.cart = []
+    await client.query("COMMIT")
 
-      return orderId
-    })
+    req.session.cart = []
 
-  const orderId =
-    createOrder()
+    res.status(201).json({
+      message: "Order created",
+      order: {
+        id: orderId,
+        status: "Processing",
 
-  res.status(201).json({
-    message: "Order created",
-    order: {
-      id: orderId,
-      status: "Processing",
+        contact: {
+          firstName: contact.firstName.trim(),
+          lastName: contact.lastName.trim(),
+          email: contact.email.trim(),
+          phone:
+            contact.phone?.trim() || null,
+        },
 
-      contact: {
-        firstName:
-          contact.firstName.trim(),
-        lastName:
-          contact.lastName.trim(),
-        email:
-          contact.email.trim(),
-        phone:
-          contact.phone?.trim() ||
-          null,
-      },
+        shippingAddress: {
+          address:
+            shippingDetails.address.trim(),
+          city:
+            shippingDetails.city.trim(),
+          postcode:
+            shippingDetails.postcode.trim(),
+          country:
+            shippingDetails.country.trim(),
+        },
 
-      shippingAddress: {
-        address:
-          shippingDetails.address.trim(),
-        city:
-          shippingDetails.city.trim(),
-        postcode:
-          shippingDetails.postcode.trim(),
-        country:
-          shippingDetails.country.trim(),
-      },
-
-      subtotal,
-      shipping: shippingCost,
-      tax,
-      total,
-    },
-  })
-})
-
-app.get("/api/orders", (req, res) => {
-  const userId =
-    req.session.userId
-
-  if (!userId) {
-    return res.status(401).json({
-      message: "Not authenticated",
-    })
-  }
-
-  const orders = db
-    .prepare(`
-      SELECT
-        id,
-        status,
         subtotal,
-        shipping,
+        shipping: shippingCost,
         tax,
         total,
+      },
+    })
+  } catch (error) {
+    await client.query("ROLLBACK")
 
-        first_name,
-        last_name,
-        email,
-        phone,
+    console.error(
+      "Failed to create order:",
+      error
+    )
 
-        address,
-        city,
-        postcode,
-        country,
+    res.status(500).json({
+      message: "Failed to create order",
+    })
+  } finally {
+    client.release()
+  }
+})
 
-        created_at
-      FROM orders
-      WHERE user_id = ?
-      ORDER BY created_at DESC
-    `)
-    .all(userId) as {
+app.get("/api/orders", async (req, res) => {
+  try {
+    const userId = req.session.userId
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Not authenticated",
+      })
+    }
+
+    const ordersResult = await db.query(
+      `
+        SELECT
+          id,
+          status,
+          subtotal,
+          shipping,
+          tax,
+          total,
+
+          first_name,
+          last_name,
+          email,
+          phone,
+
+          address,
+          city,
+          postcode,
+          country,
+
+          created_at
+        FROM orders
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+      `,
+      [userId]
+    )
+
+    const orders = ordersResult.rows as {
       id: number
       status: string
 
@@ -831,62 +941,57 @@ app.get("/api/orders", (req, res) => {
       created_at: string
     }[]
 
-  const getOrderItems =
-    db.prepare(`
-      SELECT
-        product_id,
-        product_name,
-        price,
-        quantity
-      FROM order_items
-      WHERE order_id = ?
-    `)
+    const result = await Promise.all(
+      orders.map(async (order) => {
+        const itemsResult = await db.query(
+          `
+            SELECT
+              product_id,
+              product_name,
+              price,
+              quantity
+            FROM order_items
+            WHERE order_id = $1
+          `,
+          [order.id]
+        )
 
-  const result =
-    orders.map((order) => ({
-      id: order.id,
-      status: order.status,
+        return {
+          id: order.id,
+          status: order.status,
 
-      subtotal: order.subtotal,
-      shipping: order.shipping,
-      tax: order.tax,
-      total: order.total,
+          subtotal: order.subtotal,
+          shipping: order.shipping,
+          tax: order.tax,
+          total: order.total,
 
-      contact: {
-        firstName:
-          order.first_name,
-        lastName:
-          order.last_name,
-        email:
-          order.email,
-        phone:
-          order.phone,
-      },
+          contact: {
+            firstName: order.first_name,
+            lastName: order.last_name,
+            email: order.email,
+            phone: order.phone,
+          },
 
-      shippingAddress: {
-        address:
-          order.address,
-        city:
-          order.city,
-        postcode:
-          order.postcode,
-        country:
-          order.country,
-      },
+          shippingAddress: {
+            address: order.address,
+            city: order.city,
+            postcode: order.postcode,
+            country: order.country,
+          },
 
-      created_at:
-        order.created_at,
+          created_at: order.created_at,
 
-      items:
-        getOrderItems.all(
-          order.id
-        ) as {
-          product_id: string
-          product_name: string
-          price: number
-          quantity: number
-        }[],
-    }))
+          items: itemsResult.rows,
+        }
+      })
+    )
 
-  res.json(result)
+    res.json(result)
+  } catch (error) {
+    console.error("Failed to fetch orders:", error)
+
+    res.status(500).json({
+      message: "Failed to fetch orders",
+    })
+  }
 })

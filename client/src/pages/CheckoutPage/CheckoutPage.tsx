@@ -101,13 +101,7 @@ export default function CheckoutPage() {
         name: "",
     })
 
-    /*
-      Auth kan fortfarande ladda när
-      CheckoutPage först renderas.
-  
-      Därför fyller vi email här när
-      användaren finns.
-    */
+
     useEffect(() => {
         if (!user) {
             return
@@ -219,13 +213,7 @@ export default function CheckoutPage() {
         setStep("payment")
     }
 
-    /*
-      PAYMENT VALIDATION
-  
-      Detta är fortfarande demo-payment.
-      Vi gör bara grundläggande frontend-
-      kontroll.
-    */
+
     function continueToConfirm() {
         const cardNumber =
             payment.cardNumber.replace(
@@ -326,13 +314,7 @@ export default function CheckoutPage() {
                 data.order.id
             )
 
-            /*
-              Backend har redan tömt
-              session cart.
-      
-              Detta synkar frontendens
-              CartContext.
-            */
+
             await clearCart()
         } catch (error) {
             setError(
@@ -1546,8 +1528,8 @@ function SummaryRow({
 
             <span
                 className={`font-mono ${success
-                        ? "font-semibold text-green-500"
-                        : "text-text"
+                    ? "font-semibold text-green-500"
+                    : "text-text"
                     }`}
             >
                 {value}
