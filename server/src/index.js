@@ -10,10 +10,15 @@ import "dotenv/config";
 import { createTables } from "./db/schema.js";
 import { seedDatabase } from "./db/seed.js";
 const PgSession = connectPgSimple(session);
+
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     credentials: true,
 }));
+
+const isProduction =
+  process.env.NODE_ENV === "production"
+
 app.use(session({
     store: new PgSession({
         pool: db,
@@ -26,8 +31,8 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        secure: false,
-        sameSite: "lax",
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
         maxAge: 1000 * 60 * 60 * 24 * 7,
     },
 }));
@@ -51,6 +56,7 @@ async function startServer() {
     }
 }
 startServer();
+
 // --- hämta produkter ---
 app.get("/api/products", async (req, res) => {
     try {

@@ -2,7 +2,7 @@ import {
   useEffect,
   useMemo,
   useState,
-  type FormEvent,
+  type SyntheticEvent,
   type ReactNode,
 } from "react"
 import { Link } from "react-router"
@@ -123,7 +123,7 @@ export default function HomePage() {
   }
 
   function handleSubscribe(
-    event: FormEvent<HTMLFormElement>
+    event: SyntheticEvent<HTMLFormElement>
   ) {
     event.preventDefault()
 
@@ -375,15 +375,11 @@ export default function HomePage() {
 
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {bestSellers.map(
-                (product, index) => (
+                (product) => (
                   <div
                     key={product.id}
                     className="relative"
                   >
-                    <div className="absolute left-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-border-strong bg-surface font-mono text-xs font-bold text-text shadow-lg">
-                      {index + 1}
-                    </div>
-
                     <ProductCard
                       product={product}
                     />

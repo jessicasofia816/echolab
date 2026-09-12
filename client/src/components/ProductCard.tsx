@@ -1,11 +1,11 @@
 import { useState } from "react"
 import { Link } from "react-router"
 import type { Product } from "../types/Product"
+import { useCart } from "../context/CartContext"
 
 interface ProductCardProps {
   product: Product
   variant?: "default" | "compact" | "featured"
-  onAddToCart?: (product: Product) => void
 }
 
 const BADGE_CLASSES: Record<string, string> = {
@@ -19,9 +19,9 @@ const BADGE_CLASSES: Record<string, string> = {
 export default function ProductCard({
   product,
   variant = "default",
-  onAddToCart,
 }: ProductCardProps) {
   const [imgLoaded, setImgLoaded] = useState(false)
+  const { addToCart } = useCart()
 
   const discount = product.original_price
     ? Math.round((1 - product.price / product.original_price) * 100)
@@ -243,7 +243,7 @@ export default function ProductCard({
           <button
             type="button"
             disabled={!product.in_stock}
-            onClick={() => onAddToCart?.(product)}
+            onClick={() => addToCart(product.id, 1)}
             className="
               rounded-lg
               px-3.5

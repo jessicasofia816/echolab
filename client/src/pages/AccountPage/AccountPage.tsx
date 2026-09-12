@@ -680,7 +680,7 @@ export default function AccountPage() {
 
                             <p className="mt-4 text-xs leading-5 text-text-muted">
                                 Editing account information will be
-                                added when the account API is connected.
+                                added later.
                             </p>
                         </div>
                     </section>

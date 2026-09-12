@@ -447,10 +447,10 @@ app.post("/api/auth/login", async (req, res) => {
 
     const user = result.rows[0] as
       | {
-          id: number
-          email: string
-          password_hash: string
-        }
+        id: number
+        email: string
+        password_hash: string
+      }
       | undefined
 
     if (!user) {
@@ -525,6 +525,24 @@ app.get("/api/auth/me", async (req, res) => {
       message: "Failed to fetch user",
     })
   }
+})
+
+app.post("/api/auth/logout", (req, res) => {
+  req.session.destroy((error) => {
+    if (error) {
+      console.error(error)
+
+      return res.status(500).json({
+        message: "Could not log out",
+      })
+    }
+
+    res.clearCookie("connect.sid")
+
+    res.json({
+      message: "Logged out",
+    })
+  })
 })
 
 app.post("/api/wishlist/:productId", async (req, res) => {
@@ -709,10 +727,10 @@ app.post("/api/orders", async (req, res) => {
 
         const product = result.rows[0] as
           | {
-              id: string
-              name: string
-              price: number
-            }
+            id: string
+            name: string
+            price: number
+          }
           | undefined
 
         if (!product) {
