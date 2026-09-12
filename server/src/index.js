@@ -1,5 +1,6 @@
 import express from "express";
 const app = express();
+app.set("trust proxy", 1);
 app.use(express.json());
 import { db } from "./db/db.js";
 import cors from "cors";
@@ -10,15 +11,10 @@ import "dotenv/config";
 import { createTables } from "./db/schema.js";
 import { seedDatabase } from "./db/seed.js";
 const PgSession = connectPgSimple(session);
-
 app.use(cors({
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
     credentials: true,
 }));
-
-const isProduction =
-  process.env.NODE_ENV === "production"
-
 app.use(session({
     store: new PgSession({
         pool: db,
@@ -31,8 +27,8 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? "none" : "lax",
+        secure: false,
+        sameSite: "lax",
         maxAge: 1000 * 60 * 60 * 24 * 7,
     },
 }));
@@ -56,7 +52,6 @@ async function startServer() {
     }
 }
 startServer();
-
 // --- hämta produkter ---
 app.get("/api/products", async (req, res) => {
     try {
@@ -375,6 +370,20 @@ app.get("/api/auth/me", async (req, res) => {
             message: "Failed to fetch user",
         });
     }
+});
+app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((error) => {
+        if (error) {
+            console.error(error);
+            return res.status(500).json({
+                message: "Could not log out",
+            });
+        }
+        res.clearCookie("connect.sid");
+        res.json({
+            message: "Logged out",
+        });
+    });
 });
 app.post("/api/wishlist/:productId", async (req, res) => {
     try {
