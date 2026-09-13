@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import studioImage from "../../assets/images/studio.jpg";
+import studioImage from "../../assets/images/Studio.jpg";
 
 export default function About() {
 
