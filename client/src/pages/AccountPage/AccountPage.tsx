@@ -1,5 +1,12 @@
-import { Link, Navigate, useSearchParams } from "react-router"
-import { useEffect, useState } from "react"
+import {
+    Link,
+    Navigate,
+    useSearchParams,
+} from "react-router"
+import {
+    useEffect,
+    useState,
+} from "react"
 import { useAuth } from "../../context/AuthContext"
 import { useWishlist } from "../../context/WishlistContext"
 import ProductCard from "../../components/ProductCard"
@@ -16,9 +23,12 @@ export default function AccountPage() {
     const { user, loading } = useAuth()
     const { wishlist } = useWishlist()
     const { cart } = useCart()
+
     const API_URL = import.meta.env.VITE_API_URL
 
-    const [orders, setOrders] = useState<Order[]>([])
+    const [orders, setOrders] =
+        useState<Order[]>([])
+
     const [ordersLoading, setOrdersLoading] =
         useState(true)
 
@@ -30,13 +40,56 @@ export default function AccountPage() {
         "overview"
 
     const cartCount = cart.reduce(
-        (total, item) => total + item.quantity,
+        (total, item) =>
+            total + item.quantity,
         0
     )
 
     function setTab(tab: AccountTab) {
         setSearchParams({ tab })
     }
+
+    useEffect(() => {
+        if (!user) {
+            setOrders([])
+            setOrdersLoading(false)
+            return
+        }
+
+        async function getOrders() {
+            try {
+                setOrdersLoading(true)
+
+                const response = await fetch(
+                    `${API_URL}/api/orders`,
+                    {
+                        credentials: "include",
+                    }
+                )
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Failed to fetch orders"
+                    )
+                }
+
+                const data = await response.json()
+
+                setOrders(data)
+            } catch (error) {
+                console.error(
+                    "Failed to fetch orders:",
+                    error
+                )
+
+                setOrders([])
+            } finally {
+                setOrdersLoading(false)
+            }
+        }
+
+        getOrders()
+    }, [API_URL, user])
 
     if (loading) {
         return (
@@ -51,7 +104,12 @@ export default function AccountPage() {
     }
 
     if (!user) {
-        return <Navigate to="/auth" replace />
+        return (
+            <Navigate
+                to="/auth"
+                replace
+            />
+        )
     }
 
     const initials = user.email
@@ -59,9 +117,10 @@ export default function AccountPage() {
         .toUpperCase()
 
     const memberSince = user.created_at
-        ? new Date(user.created_at).getFullYear()
+        ? new Date(
+            user.created_at
+        ).getFullYear()
         : null
-
 
     const tabs: {
         id: AccountTab
@@ -84,45 +143,6 @@ export default function AccountPage() {
                 label: "Settings",
             },
         ]
-    useEffect(() => {
-        if (!user) {
-            setOrders([])
-            setOrdersLoading(false)
-            return
-        }
-
-        async function getOrders() {
-            try {
-                setOrdersLoading(true)
-
-                const response = await fetch(
-                    `${API_URL}/api/orders`,
-                    {
-                        credentials: "include",
-                    }
-                )
-
-                if (!response.ok) {
-                    throw new Error("Failed to fetch orders")
-                }
-
-                const data = await response.json()
-
-                setOrders(data)
-            } catch (error) {
-                console.error(
-                    "Failed to fetch orders:",
-                    error
-                )
-
-                setOrders([])
-            } finally {
-                setOrdersLoading(false)
-            }
-        }
-
-        getOrders()
-    }, [API_URL, user])
 
     return (
         <main className="min-h-screen bg-background">
@@ -738,8 +758,8 @@ function OrderPriceRow({
 
             <span
                 className={`font-mono ${free
-                        ? "font-semibold text-green-500"
-                        : "text-text"
+                    ? "font-semibold text-green-500"
+                    : "text-text"
                     }`}
             >
                 {free
